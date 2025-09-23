@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { RepoDesignation, createRepo, listCommits, uploadFiles } from "@huggingface/hub";
+
+import { isAuthenticated } from "@/lib/auth";
+import Project from "@/models/Project";
+import dbConnect from "@/lib/mongodb";
+import { Commit, Page } from "@/types";
+import { COLORS } from "@/lib/utils";
+
+export async function POST(
+  req: NextRequest,
+) {
+  const user = await isAuthenticated();
+  if (user instanceof NextResponse || !user) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  await dbConnect();
+  const { title: titleFromRequest, pages, prompt } = await req.json();
+
+  const title = titleFromRequest ?? "DeepSite Project";
+
+  const formattedTitle = title
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, "-")
+  .split("-")
+  .filter(Boolean)
+  .join("-")
+  .slice(0, 96);
+
+  const repo: RepoDesignation = {
+    type: "space",
+    name: `${user.name}/${formattedTitle}`,
+  };
+  const colorFrom = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const colorTo = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const README = `---
+title: ${title}
+colorFrom: ${colorFrom}
+colorTo: ${colorTo}
+emoji: 🐳
+sdk: static
+pinned: false
+tags:
+  - deepsite-v3
+---
+
+# Welcome to your new DeepSite project!
+This project was created with [DeepSite](https://deepsite.hf.co).
+`;
+
+  const files: File[] = [];
+  const readmeFile = new File([README], "README.md", { type: "text/markdown" });
+  files.push(readmeFile);
+  pages.forEach((page: Page) => {
+    const file = new File([page.html], page.path, { type: "text/html" });
+    files.push(file);
+  });
+
+  try {
+    const { repoUrl } = await createRepo({
+      repo,
+      accessToken: user.token as string,
+    });
+    await uploadFiles({
+      repo,
+      files,
+      accessToken: user.token as string,
+      commitTitle: prompt ?? "Redesign my website"
+    });
+
+    const path = repoUrl.split("/").slice(-2).join("/");
+    const project = await Project.create({
+      user_id: user.id,
+      space_id: path,
+    });
+
+    const commits: Commit[] = [];
+    for await (const commit of listCommits({ repo, accessToken: user.token as string })) {
+      if (commit.title.includes("initial commit") || commit.title.includes("image(s)") || commit.title.includes("Promote version")) {
+        continue;
+      }
+      commits.push({
+        title: commit.title,
+        oid: commit.oid,
+        date: commit.date,
+      });
+    }
+
+    let newProject = {
+      files,
+      pages,
+      commits,
+      project,
+    }
+    
+    return NextResponse.json({ space: newProject, path, ok: true }, { status: 201 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message, ok: false },
+      { status: 500 }
+    );
+  }
+}
