@@ -3,9 +3,9 @@ import { ChevronRight, RefreshCcw } from "lucide-react";
 import { useState } from "react";
 import { TailwindColors } from "./tailwind-colors";
 import { Switch } from "@/components/ui/switch";
-import { EnhancedSettings } from ".";
 import { Button } from "@/components/ui/button";
 import { Themes } from "./themes";
+import { EnhancedSettings } from "@/types";
 
 export const ContentModal = ({
   enhancedSettings,
