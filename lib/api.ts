@@ -14,7 +14,6 @@ export const apiServer = axios.create({
     cache: "no-store",
   },
 });
-
 api.interceptors.request.use(
   async (config) => {
     // get the token from cookies
@@ -33,3 +32,4 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+

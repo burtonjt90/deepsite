@@ -5,26 +5,36 @@ import { useCookie } from "react-use";
 import { useRouter } from "next/navigation";
 
 import { User } from "@/types";
-import MY_TOKEN_KEY from "@/lib/get-cookie-name";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { 
+  storeAuthDataFallback, 
+  getAuthDataFallback, 
+  clearAuthDataFallback,
+  isInIframe 
+} from "@/lib/iframe-storage";
 
 
 export const useUser = (initialData?: {
   user: User | null;
   errCode: number | null;
 }) => {
-  const cookie_name = MY_TOKEN_KEY();
   const client = useQueryClient();
   const router = useRouter();
-  const [, setCookie, removeCookie] = useCookie(cookie_name);
   const [currentRoute, setCurrentRoute, removeCurrentRoute] = useCookie("deepsite-currentRoute");
 
   const { data: { user, errCode } = { user: null, errCode: null }, isLoading } =
     useQuery({
       queryKey: ["user.me"],
       queryFn: async () => {
-        return { user: initialData?.user, errCode: initialData?.errCode };
+        // Check for fallback data if no initial data provided and we're in iframe
+        if (!initialData && isInIframe()) {
+          const fallbackData = getAuthDataFallback();
+          if (fallbackData.user && fallbackData.token) {
+            return { user: fallbackData.user, errCode: null };
+          }
+        }
+        return { user: initialData?.user || null, errCode: initialData?.errCode || null };
       },
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
@@ -59,7 +69,12 @@ export const useUser = (initialData?: {
       .post("/auth", { code })
       .then(async (res: any) => {
         if (res.data) {
-          setCookie(res.data.access_token);
+          // Cookie is now set server-side with proper iframe attributes
+          // Also store fallback data for iframe contexts
+          if (res.data.useLocalStorageFallback) {
+            storeAuthDataFallback(res.data.access_token, res.data.user);
+          }
+          
           client.setQueryData(["user.me"], {
             user: res.data.user,
             errCode: null,
@@ -82,12 +97,27 @@ export const useUser = (initialData?: {
   };
 
   const logout = async () => {
-    removeCookie();
-    removeCurrentRoute();
-    router.push("/");
-    toast.success("Logout successful");
-    client.invalidateQueries({ queryKey: ["user.me"] });
-    window.location.reload();
+    try {
+      // Call server endpoint to clear the HTTP-only cookie
+      await api.post("/auth/logout");
+      // Clear fallback storage
+      clearAuthDataFallback();
+      removeCurrentRoute();
+      client.setQueryData(["user.me"], { user: null, errCode: null });
+      router.push("/");
+      toast.success("Logout successful");
+      client.invalidateQueries({ queryKey: ["user.me"] });
+      window.location.reload();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if server call fails, clear client state
+      clearAuthDataFallback();
+      removeCurrentRoute();
+      client.setQueryData(["user.me"], { user: null, errCode: null });
+      router.push("/");
+      toast.success("Logout successful");
+      window.location.reload();
+    }
   };
 
   return {

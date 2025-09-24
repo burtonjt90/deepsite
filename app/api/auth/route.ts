@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import MY_TOKEN_KEY from "@/lib/get-cookie-name";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -70,11 +71,17 @@ export async function POST(req: NextRequest) {
   }
   const user = await userResponse.json();
 
-  return NextResponse.json(
+  const cookieName = MY_TOKEN_KEY();
+  const isProduction = process.env.NODE_ENV === "production";
+  
+  // Create response with user data
+  const nextResponse = NextResponse.json(
     {
       access_token: response.access_token,
       expires_in: response.expires_in,
       user,
+      // Include fallback flag for iframe contexts
+      useLocalStorageFallback: true,
     },
     {
       status: 200,
@@ -83,4 +90,17 @@ export async function POST(req: NextRequest) {
       },
     }
   );
+  
+  // Set HTTP-only cookie with proper attributes for iframe support
+  const cookieOptions = [
+    `${cookieName}=${response.access_token}`,
+    `Max-Age=${response.expires_in || 3600}`, // Default 1 hour if not provided
+    "Path=/",
+    "HttpOnly",
+    ...(isProduction ? ["Secure", "SameSite=None"] : ["SameSite=Lax"])
+  ].join("; ");
+  
+  nextResponse.headers.set("Set-Cookie", cookieOptions);
+  
+  return nextResponse;
 }
