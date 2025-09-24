@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { RepoDesignation, createRepo, listCommits, uploadFiles } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
-import Project from "@/models/Project";
-import dbConnect from "@/lib/mongodb";
 import { Commit, Page } from "@/types";
 import { COLORS } from "@/lib/utils";
 
@@ -15,7 +13,6 @@ export async function POST(
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  await dbConnect();
   const { title: titleFromRequest, pages, prompt } = await req.json();
 
   const title = titleFromRequest ?? "DeepSite Project";
@@ -70,10 +67,6 @@ This project was created with [DeepSite](https://deepsite.hf.co).
     });
 
     const path = repoUrl.split("/").slice(-2).join("/");
-    const project = await Project.create({
-      user_id: user.id,
-      space_id: path,
-    });
 
     const commits: Commit[] = [];
     for await (const commit of listCommits({ repo, accessToken: user.token as string })) {
@@ -91,7 +84,9 @@ This project was created with [DeepSite](https://deepsite.hf.co).
       files,
       pages,
       commits,
-      project,
+      project: {
+        
+      }
     }
     
     return NextResponse.json({ space: newProject, path, ok: true }, { status: 201 });

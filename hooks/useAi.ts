@@ -250,6 +250,7 @@ export const useAi = (onScrollToBottom?: () => void) => {
   const callAiFollowUp = async (prompt: string, enhancedSettings?: EnhancedSettings) => {
     if (isAiWorking) return;
     if (!prompt.trim()) return;
+
     
     setIsAiWorking(true);
     
@@ -265,7 +266,7 @@ export const useAi = (onScrollToBottom?: () => void) => {
           previousPrompts: prompts,
           model,
           pages,
-          selectedElementHtml: selectedElement,
+          selectedElementHtml: selectedElement?.outerHTML,
           files: selectedFiles,
           repoId: project?.space_id
         }),
@@ -311,7 +312,9 @@ export const useAi = (onScrollToBottom?: () => void) => {
         setIsEditableModeEnabled(false);
         if (audio.current) audio.current.play();
         if (iframe) {
-          iframe.src = iframe.src;
+          setTimeout(() => {
+            iframe.src = iframe.src;
+          }, 500);
         }
 
         return { success: true, html: res.html, updatedLines: res.updatedLines };

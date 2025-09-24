@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RepoDesignation, listFiles, uploadFiles } from "@huggingface/hub";
+import { RepoDesignation, listFiles, spaceInfo, uploadFiles } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
-import Project from "@/models/Project";
-import dbConnect from "@/lib/mongodb";
 
 export async function POST(
   req: NextRequest,
@@ -21,27 +19,34 @@ export async function POST(
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  await dbConnect();
   const param = await params;
   const { namespace, repoId, commitId } = param;
-
-  const project = await Project.findOne({
-    user_id: user.id,
-    space_id: `${namespace}/${repoId}`,
-  }).lean();
-
-  if (!project) {
-    return NextResponse.json(
-      { ok: false, error: "Project not found" },
-      { status: 404 }
-    );
-  }
 
   try {
     const repo: RepoDesignation = {
       type: "space",
       name: `${namespace}/${repoId}`,
     };
+
+    const space = await spaceInfo({
+      name: `${namespace}/${repoId}`,
+      accessToken: user.token as string,
+      additionalFields: ["author"],
+    });
+
+    if (!space || space.sdk !== "static") {
+      return NextResponse.json(
+        { ok: false, error: "Space is not a static space." },
+        { status: 404 }
+      );
+    }
+    
+    if (space.author !== user.name) {
+      return NextResponse.json(
+        { ok: false, error: "Space does not belong to the authenticated user." },
+        { status: 403 }
+      );
+    }
 
     // Fetch files from the specific commit
     const files: File[] = [];
@@ -116,7 +121,6 @@ export async function POST(
     );
 
   } catch (error: any) {
-    console.error("Error promoting version:", error);
     
     // Handle specific HuggingFace API errors
     if (error.statusCode === 404) {

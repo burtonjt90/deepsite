@@ -19,39 +19,7 @@ export async function getProjects(): Promise<{
     };
   }
 
-  // await dbConnect();
-  // const projects = await Project.find({
-  //   user_id: user?.id,
-  // })
-  //   .sort({ _createdAt: -1 })
-  //   .limit(100)
-  //   .lean();
-  // if (!projects) {
-  //   return {
-  //     ok: true,
-  //     isEmpty: true,
-  //     projects: [],
-  //   };
-  // }
-
-  // const mappedProjects = []
-
-  // for (const project of projects) {
-  //   const space = await spaceInfo({
-  //     name: project.space_id,
-  //     accessToken: user.token as string,
-  //     additionalFields: ["author", "cardData"],
-  //   });
-  //   if (!space.private) {
-  //     mappedProjects.push({
-  //       ...project,
-  //       name: space.name,
-  //       cardData: space.cardData,
-  //     });
-  //   }
-  // }
   const projects = [];
-  // get user spaces from Hugging Face
   for await (const space of listSpaces({
     accessToken: user.token as string,
     additionalFields: ["author", "cardData"],

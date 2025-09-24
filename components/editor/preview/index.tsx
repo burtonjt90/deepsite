@@ -92,6 +92,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
             const mockElement = {
               tagName: data.tagName,
               getBoundingClientRect: () => data.rect,
+              outerHTML: data.element,
             };
             setSelectedElement(mockElement as any);
             setIsEditableModeEnabled(false);

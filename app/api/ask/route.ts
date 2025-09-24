@@ -103,8 +103,6 @@ export async function POST(request: NextRequest) {
     rewrittenPrompt = await rewritePrompt(prompt, enhancedSettings, { token, billTo }, selectedModel.value, selectedProvider);
   }
 
-  console.log(rewrittenPrompt);
-
   try {
     const encoder = new TextEncoder();
     const stream = new TransformStream();
@@ -133,7 +131,7 @@ export async function POST(request: NextRequest) {
               },
               {
                 role: "user",
-                content: `${rewritePrompt}${redesignMarkdown ? `\n\nHere is my current design as a markdown:\n\n${redesignMarkdown}\n\nNow, please create a new design based on this markdown. Use the images in the markdown.` : ""}`
+                content: `${rewrittenPrompt}${redesignMarkdown ? `\n\nHere is my current design as a markdown:\n\n${redesignMarkdown}\n\nNow, please create a new design based on this markdown. Use the images in the markdown.` : ""}`
               },
             ],
             max_tokens: selectedProvider.max_tokens,
@@ -277,6 +275,21 @@ export async function PUT(request: NextRequest) {
 
   const client = new InferenceClient(token);
 
+  // Helper function to escape regex special characters
+  const escapeRegExp = (string: string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  // Helper function to create flexible HTML regex that handles varying spaces
+  const createFlexibleHtmlRegex = (searchBlock: string) => {
+    let searchRegex = escapeRegExp(searchBlock)
+      .replace(/\s+/g, '\\s*') // Allow any amount of whitespace where there are spaces
+      .replace(/>\s*</g, '>\\s*<') // Allow spaces between HTML tags
+      .replace(/\s*>/g, '\\s*>'); // Allow spaces before closing >
+    
+    return new RegExp(searchRegex, 'g');
+  };
+
   const selectedProvider = await getBestProvider(selectedModel.value, provider)
 
   try {
@@ -300,7 +313,7 @@ export async function PUT(request: NextRequest) {
 
             content: `${
               selectedElementHtml
-                ? `\n\nYou have to update ONLY the following element, NOTHING ELSE: \n\n\`\`\`html\n${selectedElementHtml}\n\`\`\``
+                ? `\n\nYou have to update ONLY the following element, NOTHING ELSE: \n\n\`\`\`html\n${selectedElementHtml}\n\`\`\` Could be in multiple pages, if so, update all the pages.`
                 : ""
             }. Current pages: ${pages?.map((p: Page) => `- ${p.path} \n${p.html}`).join("\n")}. ${files?.length > 0 ? `Current images: ${files?.map((f: string) => `- ${f}`).join("\n")}.` : ""}`,
           },
@@ -381,15 +394,18 @@ export async function PUT(request: NextRequest) {
               pageHtml = `${replaceBlock}\n${pageHtml}`;
               updatedLines.push([1, replaceBlock.split("\n").length]);
             } else {
-              const blockPosition = pageHtml.indexOf(searchBlock);
-              if (blockPosition !== -1) {
-                const beforeText = pageHtml.substring(0, blockPosition);
+              const regex = createFlexibleHtmlRegex(searchBlock);
+              const match = regex.exec(pageHtml);
+              
+              if (match) {
+                const matchedText = match[0];
+                const beforeText = pageHtml.substring(0, match.index);
                 const startLineNumber = beforeText.split("\n").length;
                 const replaceLines = replaceBlock.split("\n").length;
                 const endLineNumber = startLineNumber + replaceLines - 1;
 
                 updatedLines.push([startLineNumber, endLineNumber]);
-                pageHtml = pageHtml.replace(searchBlock, replaceBlock);
+                pageHtml = pageHtml.replace(matchedText, replaceBlock);
               }
             }
 
@@ -467,15 +483,18 @@ export async function PUT(request: NextRequest) {
             newHtml = `${replaceBlock}\n${newHtml}`;
             updatedLines.push([1, replaceBlock.split("\n").length]);
           } else {
-            const blockPosition = newHtml.indexOf(searchBlock);
-            if (blockPosition !== -1) {
-              const beforeText = newHtml.substring(0, blockPosition);
+            const regex = createFlexibleHtmlRegex(searchBlock);
+            const match = regex.exec(newHtml);
+            
+            if (match) {
+              const matchedText = match[0];
+              const beforeText = newHtml.substring(0, match.index);
               const startLineNumber = beforeText.split("\n").length;
               const replaceLines = replaceBlock.split("\n").length;
               const endLineNumber = startLineNumber + replaceLines - 1;
 
               updatedLines.push([startLineNumber, endLineNumber]);
-              newHtml = newHtml.replace(searchBlock, replaceBlock);
+              newHtml = newHtml.replace(matchedText, replaceBlock);
             }
           }
 

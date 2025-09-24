@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RepoDesignation, uploadFiles } from "@huggingface/hub";
+import { RepoDesignation, spaceInfo, uploadFiles } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
 import Project from "@/models/Project";
@@ -16,22 +16,26 @@ export async function POST(
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    await dbConnect();
     const param = await params;
     const { namespace, repoId } = param;
 
-    const project = await Project.findOne({
-      user_id: user.id,
-      space_id: `${namespace}/${repoId}`,
-    }).lean();
-    
-    if (!project) {
+    const space = await spaceInfo({
+      name: `${namespace}/${repoId}`,
+      accessToken: user.token as string,
+      additionalFields: ["author"],
+    });
+
+    if (!space || space.sdk !== "static") {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "Project not found",
-        },
+        { ok: false, error: "Space is not a static space." },
         { status: 404 }
+      );
+    }
+    
+    if (space.author !== user.name) {
+      return NextResponse.json(
+        { ok: false, error: "Space does not belong to the authenticated user." },
+        { status: 403 }
       );
     }
 

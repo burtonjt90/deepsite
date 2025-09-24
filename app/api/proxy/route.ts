@@ -80,14 +80,12 @@ export async function GET(req: NextRequest) {
       <script>        
         // Add event listeners and communicate with parent
         document.addEventListener('DOMContentLoaded', function() {
-          console.log('DOM loaded, setting up communication');
           let hoveredElement = null;
           let isEditModeEnabled = false;
           
           document.addEventListener('mouseover', function(event) {
             if (event.target !== document.body && event.target !== document.documentElement) {
               hoveredElement = event.target;
-              console.log('Element hovered:', event.target.tagName, 'Edit mode:', isEditModeEnabled);
               
               const rect = event.target.getBoundingClientRect();
               const message = {
@@ -100,10 +98,9 @@ export async function GET(req: NextRequest) {
                     width: rect.width,
                     height: rect.height
                   },
-                  element: event.target.outerHTML.substring(0, 200)
+                  element: event.target.outerHTML
                 }
               };
-              console.log('Sending message to parent:', message);
               parent.postMessage(message, '*');
             }
           });
@@ -134,7 +131,7 @@ export async function GET(req: NextRequest) {
                     width: rect.width,
                     height: rect.height
                   },
-                  element: event.target.outerHTML.substring(0, 200)
+                  element: event.target.outerHTML
                 }
               }, '*');
             } else {
@@ -195,14 +192,11 @@ export async function GET(req: NextRequest) {
           
           // Listen for messages from parent
           window.addEventListener('message', function(event) {
-            console.log('Iframe received message from parent:', event.data);
             if (event.data.type === 'ENABLE_EDIT_MODE') {
-              console.log('Enabling edit mode');
               isEditModeEnabled = true;
               document.body.style.userSelect = 'none';
               document.body.style.pointerEvents = 'auto';
             } else if (event.data.type === 'DISABLE_EDIT_MODE') {
-              console.log('Disabling edit mode');
               isEditModeEnabled = false;
               document.body.style.userSelect = '';
               document.body.style.pointerEvents = '';

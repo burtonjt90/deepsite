@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RepoDesignation, spaceInfo, uploadFiles, listFiles, deleteRepo, listCommits } from "@huggingface/hub";
+import { RepoDesignation, spaceInfo, listFiles, deleteRepo, listCommits } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
-import Project from "@/models/Project";
-import dbConnect from "@/lib/mongodb";
 import { Commit, Page } from "@/types";
 
 export async function DELETE(
@@ -16,21 +14,8 @@ export async function DELETE(
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  await dbConnect();
   const param = await params;
   const { namespace, repoId } = param;
-
-  const project = await Project.findOne({
-    user_id: user.id,
-    space_id: `${namespace}/${repoId}`,
-  }).lean();
-  
-  if (!project) {
-    return NextResponse.json(
-      { ok: false, error: "Project not found" },
-      { status: 404 }
-    );
-  }
 
   try {
     const space = await spaceInfo({
@@ -69,11 +54,7 @@ export async function DELETE(
       repo,
       accessToken: user.token as string,
     });
-    
-    await Project.deleteOne({
-      user_id: user.id,
-      space_id: `${namespace}/${repoId}`,
-    });
+
     
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error: any) {
@@ -94,23 +75,9 @@ export async function GET(
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  await dbConnect();
   const param = await params;
   const { namespace, repoId } = param;
 
-  const project = await Project.findOne({
-    user_id: user.id,
-    space_id: `${namespace}/${repoId}`,
-  }).lean();
-  if (!project) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Project not found",
-      },
-      { status: 404 }
-    );
-  }
   try {
     const space = await spaceInfo({
       name: namespace + "/" + repoId,
@@ -203,10 +170,13 @@ export async function GET(
         { status: 404 }
       );
     }
-
     return NextResponse.json(
       {
-        project,
+        project: {
+          id: space.id,
+          space_id: space.name,
+          _updatedAt: space.updatedAt,
+        },
         pages: htmlFiles,
         files,
         commits,
@@ -218,10 +188,6 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (error.statusCode === 404) {
-      await Project.deleteOne({
-        user_id: user.id,
-        space_id: `${namespace}/${repoId}`,
-      });
       return NextResponse.json(
         { error: "Space not found", ok: false },
         { status: 404 }
