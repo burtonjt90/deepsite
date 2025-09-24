@@ -13,6 +13,7 @@ import { AnimatedBlobs } from "@/components/animated-blobs";
 import { AiLoading } from "../ask-ai/loading";
 import { defaultHTML } from "@/lib/consts";
 import { Button } from "@/components/ui/button";
+import { LivePreview } from "../live-preview";
 import {
   MousePointerClick,
   History,
@@ -32,6 +33,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     currentTab,
     currentCommit,
     setCurrentCommit,
+    currentPageData,
   } = useEditor();
   const {
     isEditableModeEnabled,
@@ -195,12 +197,12 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
       ) : iframeSrc === "" ||
         isLoadingProject ||
         (isAiWorking && iframeSrc == "") ? (
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="w-full h-full flex items-center justify-center relative">
           <div className="py-10 w-full relative z-1 max-w-3xl mx-auto text-center">
             <AiLoading
               text={
                 isAiWorking && iframeSrc === ""
-                  ? "Creating your Project..."
+                  ? undefined
                   : "Fetching your space..."
               }
               className="flex-col"
@@ -208,6 +210,12 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
             <AnimatedBlobs />
             <AnimatedBlobs />
           </div>
+          <LivePreview
+            currentPageData={currentPageData}
+            isAiWorking={isAiWorking}
+            defaultHTML={defaultHTML}
+            className="bottom-4 left-4"
+          />
         </div>
       ) : (
         <>

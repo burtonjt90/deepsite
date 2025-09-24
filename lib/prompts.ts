@@ -18,7 +18,7 @@ export const PROMPT_FOR_REWRITE_PROMPT_END = " >>>>>>> PROMPT_FOR_REWRITE_PROMPT
 
 export const PROMPT_FOR_IMAGE_GENERATION = `If you want to use image placeholder, http://Static.photos Usage:Format: http://static.photos/[category]/[dimensions]/[seed] where dimensions must be one of: 200x200, 320x240, 640x360, 1024x576, or 1200x630; seed can be any number (1-999+) for consistent images or omit for random; categories include: nature, office, people, technology, minimal, abstract, aerial, blurred, bokeh, gradient, monochrome, vintage, white, black, blue, red, green, yellow, cityscape, workspace, food, travel, textures, industry, indoor, outdoor, studio, finance, medical, season, holiday, event, sport, science, legal, estate, restaurant, retail, wellness, agriculture, construction, craft, cosmetic, automotive, gaming, or education.
 Examples: http://static.photos/red/320x240/133 (red-themed with seed 133), http://static.photos/640x360 (random category and image), http://static.photos/nature/1200x630/42 (nature-themed with seed 42).`
-export const PROMPT_FOR_PROJECT_NAME = `REQUIRED: Generate a name for the project, based on the user's request. Try to be creative and unique. It should be short and concise (max 6 words). DON'T FORGET IT, IT'S IMPORTANT!`
+export const PROMPT_FOR_PROJECT_NAME = `REQUIRED: Generate a name for the project, based on the user's request. Try to be creative and unique. Add a emoji at the end of the name. It should be short, like 6 words. Be fancy, creative and funny. DON'T FORGET IT, IT'S IMPORTANT!`
 
 export const INITIAL_SYSTEM_PROMPT = `You are an expert UI/UX and Front-End Developer.
 You create website in a way a designer would, using ONLY HTML, CSS and Javascript.

@@ -1,18 +1,45 @@
 import Loading from "@/components/loading";
+import { useState } from "react";
+import { useInterval } from "react-use";
+
+const TEXTS = [
+  "Teaching pixels to dance with style...",
+  "AI is having a creative breakthrough...",
+  "Channeling digital vibes into pure code...",
+  "Summoning the website spirits...",
+  "Brewing some algorithmic magic...",
+  "Composing a symphony of divs and spans...",
+  "Riding the wave of computational creativity...",
+  "Aligning the stars for perfect design...",
+  "Training circus animals to write CSS...",
+  "Launching ideas into the digital stratosphere...",
+];
 
 export const AiLoading = ({
-  text = "Ai is working...",
+  text,
   className,
 }: {
   text?: string;
   className?: string;
 }) => {
+  const [selectedText, setSelectedText] = useState(
+    text ?? TEXTS[Math.floor(Math.random() * TEXTS.length)]
+  );
+  useInterval(() => {
+    if (!text) {
+      if (selectedText === TEXTS[TEXTS.length - 1]) {
+        setSelectedText(TEXTS[0]);
+      } else {
+        setSelectedText(TEXTS[TEXTS.indexOf(selectedText) + 1]);
+      }
+    }
+  }, 12000);
   return (
     <div className={`flex items-center justify-start gap-2 ${className}`}>
-      <Loading overlay={false} className="!size-4 opacity-50" />
+      <Loading overlay={false} className="!size-5 opacity-50" />
       <p className="text-neutral-400 text-sm">
         <span className="inline-flex">
-          {text.split("").map((char, index) => (
+          {selectedText.split("").map((char, index) => (
             <span
               key={index}
               className="bg-gradient-to-r from-neutral-100 to-neutral-300 bg-clip-text text-transparent animate-pulse"

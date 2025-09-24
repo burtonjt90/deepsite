@@ -86,6 +86,7 @@ export const MODELS = [
     value: "deepseek-ai/DeepSeek-V3.1-Terminus",
     label: "DeepSeek V3.1 Terminus",
     providers: ["novita"],
+    autoProvider: "novita",
     isNew: true,
   }
 ];

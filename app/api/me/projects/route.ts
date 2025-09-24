@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RepoDesignation, createRepo, listCommits, uploadFiles } from "@huggingface/hub";
+import { RepoDesignation, createRepo, listCommits, spaceInfo, uploadFiles } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
 import { Commit, Page } from "@/types";
@@ -55,15 +55,16 @@ This project was created with [DeepSite](https://deepsite.hf.co).
   });
 
   try {
-    const { repoUrl } = await createRepo({
+    const { repoUrl} = await createRepo({
       repo,
       accessToken: user.token as string,
     });
+    const commitTitle = !prompt || prompt.trim() === "" ? "Redesign my website" : prompt;
     await uploadFiles({
       repo,
       files,
       accessToken: user.token as string,
-      commitTitle: prompt ?? "Redesign my website"
+      commitTitle
     });
 
     const path = repoUrl.split("/").slice(-2).join("/");
@@ -80,12 +81,19 @@ This project was created with [DeepSite](https://deepsite.hf.co).
       });
     }
 
+    const space = await spaceInfo({
+      name: repo.name,
+      accessToken: user.token as string,
+    });
+
     let newProject = {
       files,
       pages,
       commits,
       project: {
-        
+        id: space.id,
+        space_id: space.name,
+        _updatedAt: space.updatedAt,
       }
     }
     
