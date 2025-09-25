@@ -49,6 +49,116 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     : "";
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // For private projects, use srcDoc instead of proxy URL
+  const shouldUseCustomIframe = project?.private && currentPageData?.html;
+
+  // Inject event handling script for private projects
+  const injectInteractivityScript = (html: string) => {
+    const interactivityScript = `
+      <script>        
+        // Add event listeners and communicate with parent
+        document.addEventListener('DOMContentLoaded', function() {
+          let hoveredElement = null;
+          let isEditModeEnabled = false;
+          
+          document.addEventListener('mouseover', function(event) {
+            if (event.target !== document.body && event.target !== document.documentElement) {
+              hoveredElement = event.target;
+              
+              const rect = event.target.getBoundingClientRect();
+              const message = {
+                type: 'ELEMENT_HOVERED',
+                data: {
+                  tagName: event.target.tagName,
+                  rect: {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  },
+                  element: event.target.outerHTML
+                }
+              };
+              parent.postMessage(message, '*');
+            }
+          });
+          
+          document.addEventListener('mouseout', function(event) {
+            hoveredElement = null;
+            
+            parent.postMessage({
+              type: 'ELEMENT_MOUSE_OUT'
+            }, '*');
+          });
+          
+          // Handle clicks - prevent default only in edit mode
+          document.addEventListener('click', function(event) {
+            if (isEditModeEnabled) {
+              event.preventDefault();
+              event.stopPropagation();
+              
+              const rect = event.target.getBoundingClientRect();
+              parent.postMessage({
+                type: 'ELEMENT_CLICKED',
+                data: {
+                  tagName: event.target.tagName,
+                  rect: {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  },
+                  element: event.target.outerHTML
+                }
+              }, '*');
+            }
+          });
+          
+          // Prevent form submissions when in edit mode
+          document.addEventListener('submit', function(event) {
+            if (isEditModeEnabled) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          });
+          
+          // Prevent other navigation events when in edit mode
+          document.addEventListener('keydown', function(event) {
+            if (isEditModeEnabled && event.key === 'Enter' && (event.target.tagName === 'A' || event.target.tagName === 'BUTTON')) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          });
+          
+          // Listen for messages from parent
+          window.addEventListener('message', function(event) {
+            if (event.data.type === 'ENABLE_EDIT_MODE') {
+              isEditModeEnabled = true;
+              document.body.style.userSelect = 'none';
+              document.body.style.pointerEvents = 'auto';
+            } else if (event.data.type === 'DISABLE_EDIT_MODE') {
+              isEditModeEnabled = false;
+              document.body.style.userSelect = '';
+              document.body.style.pointerEvents = '';
+            }
+          });
+          
+          // Notify parent that script is ready
+          parent.postMessage({
+            type: 'PROXY_SCRIPT_READY'
+          }, '*');
+        });
+      </script>
+    `;
+
+    // Inject the script before closing body tag, or at the end if no body tag
+    if (html.includes("</body>")) {
+      return html.replace("</body>", `${interactivityScript}</body>`);
+    } else {
+      return html + interactivityScript;
+    }
+  };
   const [hoveredElement, setHoveredElement] = useState<{
     tagName: string;
     rect: { top: number; left: number; width: number; height: number };
@@ -130,7 +240,12 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     if (!isEditableModeEnabled) {
       setHoveredElement(null);
     }
-  }, [isEditableModeEnabled, project?.space_id]);
+  }, [
+    isEditableModeEnabled,
+    project?.space_id,
+    shouldUseCustomIframe,
+    currentPageData?.html,
+  ]);
 
   const promoteVersion = async () => {
     setIsPromotingVersion(true);
@@ -196,7 +311,8 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
         />
       ) : iframeSrc === "" ||
         isLoadingProject ||
-        (isAiWorking && iframeSrc == "") ? (
+        (isAiWorking && iframeSrc == "") ||
+        (shouldUseCustomIframe && !currentPageData?.html) ? (
         <div className="w-full h-full flex items-center justify-center relative">
           <div className="py-10 w-full relative z-1 max-w-3xl mx-auto text-center">
             <AiLoading
@@ -229,7 +345,13 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
                   device === "mobile",
               }
             )}
-            src={iframeSrc}
+            {...(shouldUseCustomIframe
+              ? {
+                  srcDoc: injectInteractivityScript(
+                    currentPageData?.html || ""
+                  ),
+                }
+              : { src: iframeSrc })}
             allow="accelerometer; ambient-light-sensor; autoplay; battery; camera; clipboard-read; clipboard-write; display-capture; document-domain; encrypted-media; fullscreen; geolocation; gyroscope; layout-animations; legacy-image-formats; magnetometer; microphone; midi; oversized-images; payment; picture-in-picture; publickey-credentials-get; serial; sync-xhr; usb; vr ; wake-lock; xr-spatial-tracking"
           />
           <div

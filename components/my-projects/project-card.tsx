@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDistance } from "date-fns";
-import { EllipsisVertical, Settings, Trash } from "lucide-react";
+import { EllipsisVertical, Lock, Settings, Trash } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,14 @@ export function ProjectCard({
       onDelete();
     }
   };
+  // from-gray-600 to-gray-600
+  // from-blue-600 to-blue-600
+  // from-green-600 to-green-600
+  // from-yellow-600 to-yellow-600
+  // from-purple-600 to-purple-600
+  // from-pink-600 to-pink-600
+  // from-red-600 to-red-600
+  // from-orange-600 to-orange-600
 
   return (
     <div className="text-neutral-200 space-y-4 group cursor-pointer">
@@ -44,16 +52,30 @@ export function ProjectCard({
         href={`/projects/${project.name}`}
         className="relative bg-neutral-900 rounded-2xl overflow-hidden h-64 lg:h-44 w-full flex items-center justify-end flex-col px-3 border border-neutral-800"
       >
-        <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <iframe
-            src={`/api/proxy/?spaceId=${encodeURIComponent(project.name)}`}
-            className="w-[1200px] h-[675px] border-0 origin-top-left"
-            style={{
-              transform: "scale(0.5)",
-              transformOrigin: "top left",
-            }}
-          />
-        </div>
+        {project.private ? (
+          <div
+            className={`absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-br from-${project.cardData?.colorFrom}-600 to-${project.cardData?.colorTo}-600`}
+          >
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
+              <Lock className="w-3 h-3 text-white/90" />
+              <span className="text-white/90 text-xs font-medium tracking-wide">
+                Private
+              </span>
+            </div>
+            <p className="text-4xl">{project.cardData?.emoji}</p>
+          </div>
+        ) : (
+          <div className="absolute inset-0 w-full h-full overflow-hidden">
+            <iframe
+              src={`/api/proxy/?spaceId=${encodeURIComponent(project.name)}`}
+              className="w-[1200px] h-[675px] border-0 origin-top-left"
+              style={{
+                transform: "scale(0.5)",
+                transformOrigin: "top left",
+              }}
+            />
+          </div>
+        )}
 
         <Button
           variant="default"

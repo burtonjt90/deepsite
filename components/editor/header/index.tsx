@@ -1,4 +1,4 @@
-import { ArrowRight, HelpCircle, RefreshCcw } from "lucide-react";
+import { ArrowRight, HelpCircle, RefreshCcw, Lock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -10,9 +10,17 @@ import { UserMenu } from "@/components/user-menu";
 import { SwitchDevice } from "@/components/editor/switch-devide";
 import { SwitchTab } from "./switch-tab";
 import { History } from "@/components/editor/history";
+import { useEditor } from "@/hooks/useEditor";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Header() {
+  const { project } = useEditor();
   const { user, openLoginWindow } = useUser();
+  console.log(project);
   return (
     <header className="border-b bg-neutral-950 dark:border-neutral-800 grid grid-cols-3 lg:flex items-center max-lg:gap-3 justify-between z-20">
       <div className="flex items-center justify-between lg:max-w-[600px] lg:w-full py-2 px-2 lg:px-3 lg:pl-6 gap-3">
@@ -72,14 +80,33 @@ export function Header() {
             </Button>
           </Link>
         </div>
-        {user ? (
-          <UserMenu className="!pl-1 !pr-3 !py-1 !h-auto" />
-        ) : (
-          <Button size="sm" onClick={openLoginWindow}>
-            Start Vibe Coding
-            <ArrowRight className="size-4" />
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {project?.private && (
+            <Tooltip>
+              <TooltipTrigger>
+                <div className="max-lg:hidden flex items-center gap-1.5 bg-amber-500/10 backdrop-blur-sm px-3 py-1.5 rounded-full border border-amber-500/20 shadow-lg">
+                  <Lock className="w-3 h-3 text-amber-500" />
+                  <span className="text-amber-500 text-xs font-medium tracking-wide">
+                    Private Project
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  This project is private. Only you can see it.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {user ? (
+            <UserMenu className="!pl-1 !pr-3 !py-1 !h-auto" />
+          ) : (
+            <Button size="sm" onClick={openLoginWindow}>
+              Start Vibe Coding
+              <ArrowRight className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

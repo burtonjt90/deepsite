@@ -169,6 +169,7 @@ export async function GET(
         project: {
           id: space.id,
           space_id: space.name,
+          private: space.private,
           _updatedAt: space.updatedAt,
         },
         pages: htmlFiles,
