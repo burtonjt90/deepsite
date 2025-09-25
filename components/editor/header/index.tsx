@@ -62,7 +62,7 @@ export function Header() {
             Refresh Preview
           </Button>
           <Link
-            href="https://huggingface.co/enzostvs/deepsite"
+            href="https://huggingface.co/spaces/enzostvs/deepsite/discussions/427"
             target="_blank"
             className="max-lg:hidden"
           >

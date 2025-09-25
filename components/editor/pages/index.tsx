@@ -5,7 +5,7 @@ import { useEditor } from "@/hooks/useEditor";
 export function ListPages() {
   const { pages, setPages, currentPage, setCurrentPage } = useEditor();
   return (
-    <div className="w-full flex items-center justify-start bg-neutral-950 overflow-auto flex-nowrap">
+    <div className="w-full flex items-center justify-start bg-neutral-950 overflow-auto flex-nowrap overflow-y-hidden">
       {pages.map((page: Page, i: number) => (
         <ListPagesItem
           key={page.path ?? i}
