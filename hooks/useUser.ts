@@ -14,6 +14,7 @@ import {
   isInIframe,
   isMobileDevice 
 } from "@/lib/iframe-storage";
+import MY_TOKEN_KEY from "@/lib/get-cookie-name";
 
 
 export const useUser = (initialData?: {
@@ -24,6 +25,7 @@ export const useUser = (initialData?: {
   const client = useQueryClient();
   const router = useRouter();
   const [currentRoute, setCurrentRoute, removeCurrentRoute] = useCookie("deepsite-currentRoute");
+  const [, , removeCookie] = useCookie(MY_TOKEN_KEY());
 
   const { data: { user, errCode } = { user: null, errCode: null }, isLoading } =
     useQuery({
@@ -124,27 +126,23 @@ export const useUser = (initialData?: {
   };
 
   const logout = async () => {
-    try {
-      await api.post("/auth/logout");
-      clearAuthDataFallback();
-      removeCurrentRoute();
-      client.setQueryData(["user.me"], { user: null, errCode: null });
-      router.push("/");
-      toast.success("Logout successful");
-      client.invalidateQueries({ queryKey: ["user.me"] });
-      client.invalidateQueries({ queryKey: ["me.projects"] });
-      window.location.reload();
-    } catch (error) {
-      console.error("Logout error:", error);
-      clearAuthDataFallback();
-      removeCurrentRoute();
-      client.setQueryData(["user.me"], { user: null, errCode: null });
-      client.invalidateQueries({ queryKey: ["user.me"] });
-      client.invalidateQueries({ queryKey: ["me.projects"] });
-      router.push("/");
-      toast.success("Logout successful");
-      window.location.reload();
-    }
+    clearAuthDataFallback();
+    removeCurrentRoute();
+    client.clear();
+    toast.success("Logout successful");
+    removeCookie();
+    window.location.reload();
+    
+    // try {
+    //   // await api.post("/auth/logout");
+    // } catch (error) {
+    //   console.error("Logout error:", error);
+    //   clearAuthDataFallback();
+    //   removeCurrentRoute();
+    //   client.clear()
+    //   router.push("/");
+    //   toast.success("Logout successful");
+    // }
   };
 
   return {
