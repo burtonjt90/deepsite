@@ -6,18 +6,42 @@ import { useMount, useTimeoutFn } from "react-use";
 
 import { Button } from "@/components/ui/button";
 import { AnimatedBlobs } from "@/components/animated-blobs";
+import { useBroadcastChannel } from "@/lib/useBroadcastChannel";
 export default function AuthCallback({
   searchParams,
 }: {
   searchParams: Promise<{ code: string }>;
 }) {
   const [showButton, setShowButton] = useState(false);
+  const [isPopupAuth, setIsPopupAuth] = useState(false);
   const { code } = use(searchParams);
   const { loginFromCode } = useUser();
+  const { postMessage } = useBroadcastChannel("auth", () => {});
 
   useMount(async () => {
     if (code) {
-      await loginFromCode(code);
+      // Check if this is a popup window opened for authentication
+      // by checking if window.opener exists or if we can communicate with parent
+      const isPopup = window.opener || window.parent !== window;
+      setIsPopupAuth(isPopup);
+
+      if (isPopup) {
+        // Broadcast the auth code to the parent window/iframe
+        postMessage({
+          type: "user-oauth",
+          code: code,
+        });
+
+        // Close this popup/tab after a short delay
+        setTimeout(() => {
+          if (window.opener) {
+            window.close();
+          }
+        }, 1000);
+      } else {
+        // Normal flow for direct navigation to callback
+        await loginFromCode(code);
+      }
     }
   });
 
@@ -41,10 +65,14 @@ export default function AuthCallback({
               </div>
             </div>
             <p className="text-xl font-semibold text-neutral-950">
-              Login In Progress...
+              {isPopupAuth
+                ? "Authentication Complete!"
+                : "Login In Progress..."}
             </p>
             <p className="text-sm text-neutral-500 mt-1.5">
-              Wait a moment while we log you in with your code.
+              {isPopupAuth
+                ? "You can now close this tab and return to the previous page."
+                : "Wait a moment while we log you in with your code."}
             </p>
           </header>
           <main className="space-y-4 p-6">

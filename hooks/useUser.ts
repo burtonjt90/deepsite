@@ -11,7 +11,8 @@ import {
   storeAuthDataFallback, 
   getAuthDataFallback, 
   clearAuthDataFallback,
-  isInIframe 
+  isInIframe,
+  isMobileDevice 
 } from "@/lib/iframe-storage";
 
 
@@ -59,6 +60,26 @@ export const useUser = (initialData?: {
 
   const openLoginWindow = async () => {
     setCurrentRoute(window.location.pathname);
+    
+    // If we're in an iframe and on mobile, open login in a new tab
+    if (isInIframe() && isMobileDevice()) {
+      try {
+        // Get the login URL from the server
+        const response = await api.get("/auth/login-url");
+        const { loginUrl } = response.data;
+        
+        // Open in new tab for mobile iframe users
+        window.open(loginUrl, "_blank", "noopener,noreferrer");
+        
+        toast.info("Login opened in new tab. Please complete authentication and return to this page.");
+        return;
+      } catch (error) {
+        console.error("Failed to open login in new tab:", error);
+        // Fall back to normal flow if opening new tab fails
+      }
+    }
+    
+    // Normal login flow for non-iframe or non-mobile users
     return router.push("/auth");
   };
 

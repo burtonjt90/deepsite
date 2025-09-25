@@ -11,6 +11,20 @@ export const isInIframe = (): boolean => {
   }
 };
 
+export const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  // Check user agent for mobile patterns
+  const userAgent = window.navigator.userAgent;
+  const mobilePattern = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i;
+  
+  // Also check for touch capability and screen size
+  const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const hasSmallScreen = window.innerWidth <= 768; // Common mobile breakpoint
+  
+  return mobilePattern.test(userAgent) || (hasTouchScreen && hasSmallScreen);
+};
+
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: "deepsite-auth-token-fallback",
   USER_DATA: "deepsite-user-data-fallback",
