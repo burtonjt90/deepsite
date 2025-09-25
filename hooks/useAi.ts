@@ -8,6 +8,7 @@ import { useEditor } from "./useEditor";
 import { Page, EnhancedSettings } from "@/types";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { useUser } from "./useUser";
 
 export const useAi = (onScrollToBottom?: () => void) => {
   const client = useQueryClient();
@@ -17,6 +18,7 @@ export const useAi = (onScrollToBottom?: () => void) => {
   const [storageProvider, setStorageProvider] = useLocalStorage("provider", "auto");
   const [storageModel, setStorageModel] = useLocalStorage("model", MODELS[0].value);
   const router = useRouter();
+  const { projects, setProjects } = useUser();
 
   const { data: isAiWorking = false } = useQuery({
     queryKey: ["ai.isAiWorking"],
@@ -111,6 +113,7 @@ export const useAi = (onScrollToBottom?: () => void) => {
       setIsAiWorking(false);
       router.replace(`/projects/${response.data.space.project.space_id}`);
       setProject(response.data.space);
+      setProjects([...projects, response.data.space]);
       toast.success("AI responded successfully");
       if (audio.current) audio.current.play();
     }

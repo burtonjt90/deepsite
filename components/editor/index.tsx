@@ -71,6 +71,7 @@ export const AppEditor = ({
                 horizontal: "hidden",
               },
               wordWrap: "on",
+              readOnly: true,
             }}
             value={currentPageData.html}
             onChange={(value) => {

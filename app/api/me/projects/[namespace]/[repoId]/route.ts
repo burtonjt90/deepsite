@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RepoDesignation, spaceInfo, listFiles, deleteRepo, listCommits } from "@huggingface/hub";
+import { RepoDesignation, spaceInfo, listFiles, deleteRepo, listCommits, downloadFile } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
 import { Commit, Page } from "@/types";
@@ -34,13 +34,6 @@ export async function DELETE(
     if (space.author !== user.name) {
       return NextResponse.json(
         { ok: false, error: "Space does not belong to the authenticated user." },
-        { status: 403 }
-      );
-    }
-
-    if (space.private) {
-      return NextResponse.json(
-        { ok: false, error: "Your space must be public to access it." },
         { status: 403 }
       );
     }
@@ -103,15 +96,15 @@ export async function GET(
         { status: 403 }
       );
     }
-    if (space.private) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "Space must be public to access it",
-        },
-        { status: 403 }
-      );
-    }
+    // if (space.private) {
+    //   return NextResponse.json(
+    //     {
+    //       ok: false,
+    //       error: "Space must be public to access it",
+    //     },
+    //     { status: 403 }
+    //   );
+    // }
 
     const repo: RepoDesignation = {
       type: "space",
@@ -125,20 +118,21 @@ export async function GET(
     
     for await (const fileInfo of listFiles({repo, accessToken: user.token as string})) {
       if (fileInfo.path.endsWith(".html")) {
-        const res = await fetch(`https://huggingface.co/spaces/${namespace}/${repoId}/raw/main/${fileInfo.path}`);
-        if (res.ok) {
-          const html = await res.text();
-          if (fileInfo.path === "index.html") {
-            htmlFiles.unshift({
-              path: fileInfo.path,
-              html,
-            });
-          } else {
+        const blob = await downloadFile({ repo, accessToken: user.token as string, path: fileInfo.path, raw: true });
+        const html = await blob?.text();
+        if (!html) {
+          continue;
+        }
+        if (fileInfo.path === "index.html") {
+          htmlFiles.unshift({
+            path: fileInfo.path,
+            html,
+          });
+        } else {
           htmlFiles.push({
             path: fileInfo.path,
-              html,
-            });
-          }
+            html,
+          });
         }
       }
       if (fileInfo.type === "directory" && fileInfo.path === "images") {

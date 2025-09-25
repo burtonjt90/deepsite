@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useProModal } from "@/components/contexts/pro-context";
 import { api } from "@/lib/api";
 import { NotLogged } from "../not-logged/not-logged";
+import { LoadProject } from "./load-project";
 
 export function MyProjects() {
   const { user, projects, setProjects } = useUser();
@@ -69,6 +70,7 @@ export function MyProjects() {
               Upgrade to PRO
             </Button>
           ) : (
+            // <LoadProject onSuccess={() => {}} />
             <div></div>
           )}
         </header>
