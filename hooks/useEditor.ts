@@ -304,6 +304,10 @@ export const useEditor = (namespace?: string, repoId?: string) => {
 
   useUpdateEffect(() => {
     if (namespace && repoId) {
+      // Reset unsaved changes state when changing projects
+      setHasUnsavedChanges(false);
+      setLastSavedPages([]);
+      
       client.invalidateQueries({ queryKey: ["editor.project"] });
       client.invalidateQueries({ queryKey: ["editor.pages"] });
       client.invalidateQueries({ queryKey: ["editor.files"] });
