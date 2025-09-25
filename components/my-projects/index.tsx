@@ -34,7 +34,7 @@ export function MyProjects() {
   };
   return (
     <>
-      <section className="max-w-[86rem] py-12 px-4 mx-auto">
+      <section className="max-w-[86rem] py-12 px-4 mx-auto overflow-x-hidden">
         <header className="flex items-center justify-between max-lg:flex-col gap-4">
           <div className="text-left">
             <h1 className="text-3xl font-bold text-white">

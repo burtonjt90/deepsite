@@ -156,7 +156,7 @@ export default function Navigation() {
           ) : (
             <>
               <Button className="!px-6 !py-3 !h-auto" onClick={openLoginWindow}>
-                Access to my Account
+                Start Vibe Coding
                 <ArrowRight className="size-4" />
               </Button>
             </>

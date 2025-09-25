@@ -76,7 +76,7 @@ export function Header() {
           <UserMenu className="!pl-1 !pr-3 !py-1 !h-auto" />
         ) : (
           <Button size="sm" onClick={openLoginWindow}>
-            Access to my Account
+            Start Vibe Coding
             <ArrowRight className="size-4" />
           </Button>
         )}
