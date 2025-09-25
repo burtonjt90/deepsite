@@ -72,6 +72,11 @@ export const AppEditor = ({
               },
               wordWrap: "on",
               readOnly: true,
+              readOnlyMessage: {
+                value:
+                  "You can't edit the code, ask DeepSite to do it for you!",
+                isTrusted: true,
+              },
             }}
             value={currentPageData.html}
             onChange={(value) => {
