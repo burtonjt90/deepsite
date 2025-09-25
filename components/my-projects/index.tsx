@@ -2,17 +2,16 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { useUser } from "@/hooks/useUser";
-import { Project, ProjectType } from "@/types";
+import { ProjectType } from "@/types";
 import { ProjectCard } from "./project-card";
-import { LoadProject } from "./load-project";
 import { MAX_FREE_PROJECTS } from "@/lib/utils";
 import { ProTag } from "@/components/pro-modal";
 import { Button } from "@/components/ui/button";
 import { useProModal } from "@/components/contexts/pro-context";
 import { api } from "@/lib/api";
-import { toast } from "sonner";
 
 export function MyProjects({
   projects: initialProjects,
@@ -71,12 +70,6 @@ export function MyProjects({
               Upgrade to PRO
             </Button>
           ) : (
-            // <LoadProject
-            //   fullXsBtn
-            //   onSuccess={(project: ProjectType) => {
-            //     setProjects((prev) => [...prev, project]);
-            //   }}
-            // />
             <div></div>
           )}
         </header>
@@ -84,14 +77,14 @@ export function MyProjects({
           {projects.length < MAX_FREE_PROJECTS || user?.isPro ? (
             <Link
               href="/projects/new"
-              className="bg-neutral-900 rounded-xl h-44 flex items-center justify-center text-neutral-300 border border-neutral-800 hover:brightness-110 transition-all duration-200"
+              className="bg-neutral-900 rounded-xl h-64 lg:h-44 flex items-center justify-center text-neutral-300 border border-neutral-800 hover:brightness-110 transition-all duration-200"
             >
               <Plus className="size-5 mr-1.5" />
               Create Project
             </Link>
           ) : (
             <div
-              className="bg-neutral-900 rounded-xl h-44 flex items-center justify-center text-neutral-300 border border-neutral-800 hover:brightness-110 transition-all duration-200 cursor-pointer"
+              className="bg-neutral-900 rounded-xl h-64 lg:h-44 flex items-center justify-center text-neutral-300 border border-neutral-800 hover:brightness-110 transition-all duration-200 cursor-pointer"
               onClick={() => openProModal([])}
             >
               <Plus className="size-5 mr-1.5" />

@@ -42,12 +42,18 @@ export function ProjectCard({
     <div className="text-neutral-200 space-y-4 group cursor-pointer">
       <Link
         href={`/projects/${project.name}`}
-        className="relative bg-neutral-900 rounded-2xl overflow-hidden h-44 w-full flex items-center justify-end flex-col px-3 border border-neutral-800"
+        className="relative bg-neutral-900 rounded-2xl overflow-hidden h-64 lg:h-44 w-full flex items-center justify-end flex-col px-3 border border-neutral-800"
       >
-        <iframe
-          src={`/api/proxy/?spaceId=${encodeURIComponent(project.name)}`}
-          className="absolute inset-0 w-full h-full top-0 left-0"
-        />
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <iframe
+            src={`/api/proxy/?spaceId=${encodeURIComponent(project.name)}`}
+            className="w-[1200px] h-[675px] border-0 origin-top-left"
+            style={{
+              transform: "scale(0.5)",
+              transformOrigin: "top left",
+            }}
+          />
+        </div>
 
         <Button
           variant="default"
