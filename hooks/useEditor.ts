@@ -13,7 +13,7 @@ export const useEditor = (namespace?: string, repoId?: string) => {
   const router = useRouter();
   const [pagesStorage,, removePagesStorage] = useLocalStorage<Page[]>("pages");
 
-  const { data: project, isLoading: isLoadingProject } = useQuery({
+  const { data: project, isFetching: isLoadingProject } = useQuery({
     queryKey: ["editor.project"],
     queryFn: async () => {
       try {
@@ -224,6 +224,84 @@ export const useEditor = (namespace?: string, repoId?: string) => {
     uploadFilesMutation.mutate({ files, project });
   };
 
+  // Unsaved changes tracking
+  const { data: lastSavedPages = [] } = useQuery<Page[]>({
+    queryKey: ["editor.lastSavedPages"],
+    queryFn: async () => [],
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    initialData: [],
+  });
+  const setLastSavedPages = (newPages: Page[]) => {
+    client.setQueryData(["editor.lastSavedPages"], newPages);
+  };
+
+  const { data: hasUnsavedChanges = false } = useQuery({
+    queryKey: ["editor.hasUnsavedChanges"],
+    queryFn: async () => false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
+  const setHasUnsavedChanges = (hasChanges: boolean) => {
+    client.setQueryData(["editor.hasUnsavedChanges"], hasChanges);
+  };
+
+  // Save changes mutation
+  const saveChangesMutation = useMutation({
+    mutationFn: async ({ pages, project, namespace, repoId }: { pages: Page[]; project: any; namespace?: string; repoId?: string }) => {
+      if (!project?.space_id || !namespace || !repoId) {
+        throw new Error("Project not found or missing parameters");
+      }
+
+      const response = await api.put(`/me/projects/${namespace}/${repoId}/save`, {
+        pages,
+        commitTitle: "Manual changes saved"
+      });
+
+      if (!response.data.ok) {
+        throw new Error(response.data.message || "Failed to save changes");
+      }
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      setLastSavedPages([...pages]);
+      setHasUnsavedChanges(false);
+      if (data.commit) {
+        setCommits((prev) => [data.commit, ...prev]);
+      }
+    },
+  });
+
+  const saveChanges = async () => {
+    if (!project || !hasUnsavedChanges || !namespace || !repoId) return;
+    return saveChangesMutation.mutateAsync({ pages, project, namespace, repoId });
+  };
+
+  // Check for unsaved changes when pages change
+  const checkForUnsavedChanges = () => {
+    if (pages.length === 0 || lastSavedPages.length === 0) return;
+    
+    const hasChanges = JSON.stringify(pages) !== JSON.stringify(lastSavedPages);
+    setHasUnsavedChanges(hasChanges);
+  };
+
+  // Update last saved pages when project loads
+  useUpdateEffect(() => {
+    if (project && pages.length > 0 && lastSavedPages.length === 0) {
+      setLastSavedPages([...pages]);
+    }
+  }, [project, pages]);
+
+  // Check for changes when pages change
+  useUpdateEffect(() => {
+    if (lastSavedPages.length > 0) {
+      checkForUnsavedChanges();
+    }
+  }, [pages, lastSavedPages]);
+
   useUpdateEffect(() => {
     if (namespace && repoId) {
       client.invalidateQueries({ queryKey: ["editor.project"] });
@@ -232,6 +310,8 @@ export const useEditor = (namespace?: string, repoId?: string) => {
       client.invalidateQueries({ queryKey: ["editor.commits"] });
       client.invalidateQueries({ queryKey: ["editor.currentPage"] });
       client.invalidateQueries({ queryKey: ["editor.currentCommit"] });
+      client.invalidateQueries({ queryKey: ["editor.lastSavedPages"] });
+      client.invalidateQueries({ queryKey: ["editor.hasUnsavedChanges"] });
     }
   }, [namespace, repoId])
 
@@ -253,10 +333,17 @@ export const useEditor = (namespace?: string, repoId?: string) => {
     setCurrentTab,
     uploadFiles,
     commits,
+    setCommits,
     currentCommit,
     setCurrentCommit,
     setProject,
     isUploading: uploadFilesMutation.isPending,
     globalEditorLoading: uploadFilesMutation.isPending || isLoadingProject,
+    // Unsaved changes functionality
+    hasUnsavedChanges,
+    saveChanges,
+    isSaving: saveChangesMutation.isPending,
+    lastSavedPages,
+    setLastSavedPages,
   };
 };

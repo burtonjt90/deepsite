@@ -44,7 +44,9 @@ export function History() {
                 className={classNames(
                   "px-4 text-gray-200 py-2 border-b border-gray-800 last:border-0 space-y-1",
                   {
-                    "bg-blue-500/10": currentCommit === item.oid,
+                    "bg-blue-500/10":
+                      currentCommit === item.oid ||
+                      (index === 0 && currentCommit === null),
                   }
                 )}
               >
@@ -64,21 +66,26 @@ export function History() {
                         hour12: false,
                       })}
                   </p>
-                  {currentCommit !== item.oid ? (
+                  {currentCommit === item.oid ||
+                  (index === 0 && currentCommit === null) ? (
+                    <span className="text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] px-2 py-0.5">
+                      Current version
+                    </span>
+                  ) : (
                     <Button
                       variant="link"
                       size="xss"
                       className="text-gray-400 hover:text-gray-200"
                       onClick={() => {
-                        setCurrentCommit(item.oid);
+                        if (index === 0) {
+                          setCurrentCommit(null);
+                        } else {
+                          setCurrentCommit(item.oid);
+                        }
                       }}
                     >
                       See version
                     </Button>
-                  ) : (
-                    <span className="text-blue-500 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] px-2 py-0.5">
-                      Current version
-                    </span>
                   )}
                 </div>
               </li>

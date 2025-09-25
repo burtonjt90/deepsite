@@ -13,7 +13,7 @@ import { useUser } from "./useUser";
 export const useAi = (onScrollToBottom?: () => void) => {
   const client = useQueryClient();
   const audio = useRef<HTMLAudioElement | null>(null);
-  const { setPages, setCurrentPage, setPrompts, prompts, pages, project, setProject } = useEditor();
+  const { setPages, setCurrentPage, setPrompts, prompts, pages, project, setProject, commits, setCommits, setLastSavedPages } = useEditor();
   const [controller, setController] = useState<AbortController | null>(null);
   const [storageProvider, setStorageProvider] = useLocalStorage("provider", "auto");
   const [storageModel, setStorageModel] = useLocalStorage("model", MODELS[0].value);
@@ -183,6 +183,7 @@ export const useAi = (onScrollToBottom?: () => void) => {
             const newPages = formatPages(contentResponse);
             const projectName = contentResponse.match(/<<<<<<< PROJECT_NAME_START ([\s\S]*?) >>>>>>> PROJECT_NAME_END/)?.[1]?.trim();
             setPages(newPages);
+            setLastSavedPages([...newPages]); // Mark initial pages as saved
             createNewProject(prompt, newPages, projectName);
             setPrompts([...prompts, prompt]);
 
@@ -307,6 +308,8 @@ export const useAi = (onScrollToBottom?: () => void) => {
         ) as HTMLIFrameElement;
 
         setPages(res.pages);
+        setLastSavedPages([...res.pages]); // Mark AI changes as saved
+        setCommits([res.commit, ...commits]);
         setPrompts(
           [...prompts, prompt]
         )

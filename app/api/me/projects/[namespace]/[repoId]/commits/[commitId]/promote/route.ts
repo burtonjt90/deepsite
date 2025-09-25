@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RepoDesignation, listFiles, spaceInfo, uploadFiles } from "@huggingface/hub";
+import { RepoDesignation, listFiles, spaceInfo, uploadFiles, deleteFiles } from "@huggingface/hub";
 
 import { isAuthenticated } from "@/lib/auth";
+import { Page } from "@/types";
 
 export async function POST(
   req: NextRequest,
@@ -50,7 +51,9 @@ export async function POST(
 
     // Fetch files from the specific commit
     const files: File[] = [];
+    const pages: Page[] = [];
     const allowedExtensions = ["html", "md", "css", "js", "json", "txt"];
+    const commitFilePaths: Set<string> = new Set();
     
     // Get all files from the specific commit
     for await (const fileInfo of listFiles({
@@ -61,6 +64,8 @@ export async function POST(
       const fileExtension = fileInfo.path.split('.').pop()?.toLowerCase();
       
       if (allowedExtensions.includes(fileExtension || "")) {
+        commitFilePaths.add(fileInfo.path);
+        
         // Fetch the file content from the specific commit
         const response = await fetch(
           `https://huggingface.co/spaces/${namespace}/${repoId}/raw/${commitId}/${fileInfo.path}`
@@ -73,6 +78,11 @@ export async function POST(
           switch (fileExtension) {
             case "html":
               mimeType = "text/html";
+              // Add HTML files to pages array for client-side setPages
+              pages.push({
+                path: fileInfo.path,
+                html: content,
+              });
               break;
             case "css":
               mimeType = "text/css";
@@ -94,28 +104,63 @@ export async function POST(
       }
     }
 
-    if (files.length === 0) {
+    // Get files currently in main branch to identify files to delete
+    const mainBranchFilePaths: Set<string> = new Set();
+    for await (const fileInfo of listFiles({
+      repo,
+      accessToken: user.token as string,
+      revision: "main",
+    })) {
+      const fileExtension = fileInfo.path.split('.').pop()?.toLowerCase();
+      
+      if (allowedExtensions.includes(fileExtension || "")) {
+        mainBranchFilePaths.add(fileInfo.path);
+      }
+    }
+
+    // Identify files to delete (exist in main but not in commit)
+    const filesToDelete: string[] = [];
+    for (const mainFilePath of mainBranchFilePaths) {
+      if (!commitFilePaths.has(mainFilePath)) {
+        filesToDelete.push(mainFilePath);
+      }
+    }
+
+    if (files.length === 0 && filesToDelete.length === 0) {
       return NextResponse.json(
-        { ok: false, error: "No files found in the specified commit" },
+        { ok: false, error: "No files found in the specified commit and no files to delete" },
         { status: 404 }
       );
     }
 
+    // Delete files that exist in main but not in the commit being promoted
+    if (filesToDelete.length > 0) {
+      await deleteFiles({
+        repo,
+        paths: filesToDelete,
+        accessToken: user.token as string,
+        commitTitle: `Removed files from promoting ${commitId.slice(0, 7)}`,
+        commitDescription: `Removed files that don't exist in commit ${commitId}:\n${filesToDelete.map(path => `- ${path}`).join('\n')}`,
+      });
+    }
+
     // Upload the files to the main branch with a promotion commit message
-    await uploadFiles({
-      repo,
-      files,
-      accessToken: user.token as string,
-      commitTitle: `Promote version ${commitId.slice(0, 7)} to main`,
-      commitDescription: `Promoted commit ${commitId} to main branch`,
-    });
+    if (files.length > 0) {
+      await uploadFiles({
+        repo,
+        files,
+        accessToken: user.token as string,
+        commitTitle: `Promote version ${commitId.slice(0, 7)} to main`,
+        commitDescription: `Promoted commit ${commitId} to main branch`,
+      });
+    }
 
     return NextResponse.json(
       { 
         ok: true, 
         message: "Version promoted successfully",
         promotedCommit: commitId,
-        filesPromoted: files.length
+        pages: pages,
       },
       { status: 200 }
     );

@@ -21,9 +21,9 @@ export function ListPagesItem({
     <div
       key={index}
       className={classNames(
-        "pl-6 pr-1 py-4 text-neutral-400 cursor-pointer text-sm hover:bg-neutral-900 flex items-center justify-center gap-1 group text-nowrap border-r border-neutral-800",
+        "pl-6 pr-1 py-3 text-neutral-400 cursor-pointer text-sm hover:bg-neutral-900 flex items-center justify-center gap-1 group text-nowrap border-r border-neutral-800",
         {
-          "bg-neutral-900 !text-white border-b": currentPage === page.path,
+          "bg-neutral-900 !text-white": currentPage === page.path,
           "!pr-6": index === 0, // Ensure the first item has padding on the right
         }
       )}

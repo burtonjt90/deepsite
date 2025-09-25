@@ -514,7 +514,7 @@ export async function PUT(request: NextRequest) {
         files.push(file);
       });
 
-      uploadFiles({
+      const response = await uploadFiles({
         repo: {
           type: "space",
           name: repoId,
@@ -528,6 +528,10 @@ export async function PUT(request: NextRequest) {
         ok: true,
         updatedLines,
         pages: updatedPages,
+        commit: {
+          ...response.commit,
+          title: prompt,
+        }
       });
     } else {
       return NextResponse.json(

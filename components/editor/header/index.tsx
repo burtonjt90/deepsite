@@ -20,7 +20,6 @@ import {
 export function Header() {
   const { project } = useEditor();
   const { user, openLoginWindow } = useUser();
-  console.log(project);
   return (
     <header className="border-b bg-neutral-950 dark:border-neutral-800 grid grid-cols-3 lg:flex items-center max-lg:gap-3 justify-between z-20">
       <div className="flex items-center justify-between lg:max-w-[600px] lg:w-full py-2 px-2 lg:px-3 lg:pl-6 gap-3">

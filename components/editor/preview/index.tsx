@@ -30,6 +30,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     setCurrentCommit,
     currentPageData,
     pages,
+    setPages,
     setCurrentPage,
   } = useEditor();
   const {
@@ -37,154 +38,10 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     setSelectedElement,
     isAiWorking,
     globalAiLoading,
-    setIsEditableModeEnabled,
   } = useAi();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Inject event handling script
-  const injectInteractivityScript = (html: string) => {
-    const interactivityScript = `
-      <script>        
-        // Add event listeners and communicate with parent
-        document.addEventListener('DOMContentLoaded', function() {
-          let hoveredElement = null;
-          let isEditModeEnabled = false;
-          
-          document.addEventListener('mouseover', function(event) {
-            if (event.target !== document.body && event.target !== document.documentElement) {
-              hoveredElement = event.target;
-              
-              const rect = event.target.getBoundingClientRect();
-              const message = {
-                type: 'ELEMENT_HOVERED',
-                data: {
-                  tagName: event.target.tagName,
-                  rect: {
-                    top: rect.top,
-                    left: rect.left,
-                    width: rect.width,
-                    height: rect.height
-                  },
-                  element: event.target.outerHTML
-                }
-              };
-              parent.postMessage(message, '*');
-            }
-          });
-          
-          document.addEventListener('mouseout', function(event) {
-            hoveredElement = null;
-            
-            parent.postMessage({
-              type: 'ELEMENT_MOUSE_OUT'
-            }, '*');
-          });
-          
-          // Handle clicks - prevent default only in edit mode
-          document.addEventListener('click', function(event) {
-            if (isEditModeEnabled) {
-              event.preventDefault();
-              event.stopPropagation();
-              
-              const rect = event.target.getBoundingClientRect();
-              parent.postMessage({
-                type: 'ELEMENT_CLICKED',
-                data: {
-                  tagName: event.target.tagName,
-                  rect: {
-                    top: rect.top,
-                    left: rect.left,
-                    width: rect.width,
-                    height: rect.height
-                  },
-                  element: event.target.outerHTML
-                }
-              }, '*');
-            } else {
-              // Handle link clicks to navigate between pages
-              const link = event.target.closest('a');
-              if (link && link.href) {
-                event.preventDefault();
-                
-                const url = new URL(link.href, window.location.href);
-                
-                // Check if it's a relative link (same origin)
-                if (url.origin === window.location.origin || link.href.startsWith('/') || link.href.startsWith('./') || link.href.startsWith('../') || !link.href.includes('://')) {
-                  // Extract the path from the link
-                  let targetPath = link.getAttribute('href') || '';
-                  
-                  // Handle relative paths
-                  if (targetPath.startsWith('./')) {
-                    targetPath = targetPath.substring(2);
-                  } else if (targetPath.startsWith('/')) {
-                    targetPath = targetPath.substring(1);
-                  }
-                  
-                  // If no extension, assume .html
-                  if (!targetPath.includes('.') && !targetPath.includes('?') && !targetPath.includes('#')) {
-                    targetPath = targetPath === '' ? 'index.html' : targetPath + '.html';
-                  }
-                  
-                  // Send message to parent to navigate to the page
-                  parent.postMessage({
-                    type: 'NAVIGATE_TO_PAGE',
-                    data: {
-                      targetPath: targetPath
-                    }
-                  }, '*');
-                } else {
-                  // External link - open in new tab
-                  window.open(link.href, '_blank');
-                }
-              }
-            }
-          });
-          
-          // Prevent form submissions when in edit mode
-          document.addEventListener('submit', function(event) {
-            if (isEditModeEnabled) {
-              event.preventDefault();
-              event.stopPropagation();
-            }
-          });
-          
-          // Prevent other navigation events when in edit mode
-          document.addEventListener('keydown', function(event) {
-            if (isEditModeEnabled && event.key === 'Enter' && (event.target.tagName === 'A' || event.target.tagName === 'BUTTON')) {
-              event.preventDefault();
-              event.stopPropagation();
-            }
-          });
-          
-          // Listen for messages from parent
-          window.addEventListener('message', function(event) {
-            if (event.data.type === 'ENABLE_EDIT_MODE') {
-              isEditModeEnabled = true;
-              document.body.style.userSelect = 'none';
-              document.body.style.pointerEvents = 'auto';
-            } else if (event.data.type === 'DISABLE_EDIT_MODE') {
-              isEditModeEnabled = false;
-              document.body.style.userSelect = '';
-              document.body.style.pointerEvents = '';
-            }
-          });
-          
-          // Notify parent that script is ready
-          parent.postMessage({
-            type: 'IFRAME_SCRIPT_READY'
-          }, '*');
-        });
-      </script>
-    `;
-
-    // Inject the script before closing body tag, or at the end if no body tag
-    if (html.includes("</body>")) {
-      return html.replace("</body>", `${interactivityScript}</body>`);
-    } else {
-      return html + interactivityScript;
-    }
-  };
   const [hoveredElement, setHoveredElement] = useState<{
     tagName: string;
     rect: { top: number; left: number; width: number; height: number };
@@ -192,99 +49,12 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
   const [isPromotingVersion, setIsPromotingVersion] = useState(false);
   const [stableHtml, setStableHtml] = useState<string>("");
 
-  // Handle PostMessage communication with iframe
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Verify origin for security
-      if (!event.origin.includes(window.location.origin)) {
-        return;
-      }
-
-      const { type, data } = event.data;
-      switch (type) {
-        case "IFRAME_SCRIPT_READY":
-          if (iframeRef.current?.contentWindow) {
-            iframeRef.current.contentWindow.postMessage(
-              {
-                type: isEditableModeEnabled
-                  ? "ENABLE_EDIT_MODE"
-                  : "DISABLE_EDIT_MODE",
-              },
-              "*"
-            );
-          }
-          break;
-        case "ELEMENT_HOVERED":
-          if (isEditableModeEnabled) {
-            setHoveredElement(data);
-          }
-          break;
-        case "ELEMENT_MOUSE_OUT":
-          if (isEditableModeEnabled) {
-            setHoveredElement(null);
-          }
-          break;
-        case "ELEMENT_CLICKED":
-          if (isEditableModeEnabled) {
-            const mockElement = {
-              tagName: data.tagName,
-              getBoundingClientRect: () => data.rect,
-              outerHTML: data.element,
-            };
-            setSelectedElement(mockElement as any);
-            setIsEditableModeEnabled(false);
-          }
-          break;
-        case "NAVIGATE_TO_PAGE":
-          // Handle navigation between pages by updating currentPageData
-          if (data.targetPath) {
-            // Find the page in the pages array
-            const targetPage = pages.find(
-              (page) => page.path === data.targetPath
-            );
-            if (targetPage) {
-              setCurrentPage(data.targetPath);
-            } else {
-              // If page doesn't exist, you might want to create it or show an error
-              console.warn(`Page not found: ${data.targetPath}`);
-              toast.error(`Page not found: ${data.targetPath}`);
-            }
-          }
-          break;
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [setSelectedElement, isEditableModeEnabled, pages, setCurrentPage]);
-
-  // Send edit mode state to iframe and clear hover state when disabled
-  useUpdateEffect(() => {
-    if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage(
-        {
-          type: isEditableModeEnabled
-            ? "ENABLE_EDIT_MODE"
-            : "DISABLE_EDIT_MODE",
-        },
-        "*"
-      );
-    }
-
-    // Clear hover state when edit mode is disabled
-    if (!isEditableModeEnabled) {
-      setHoveredElement(null);
-    }
-  }, [isEditableModeEnabled, stableHtml]);
-
-  // Update stable HTML only when AI finishes working to prevent blinking
   useEffect(() => {
     if (!isAiWorking && !globalAiLoading && currentPageData?.html) {
       setStableHtml(currentPageData.html);
     }
   }, [isAiWorking, globalAiLoading, currentPageData?.html]);
 
-  // Initialize stable HTML when component first loads
   useEffect(() => {
     if (
       currentPageData?.html &&
@@ -296,6 +66,32 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     }
   }, [currentPageData?.html, stableHtml, isAiWorking, globalAiLoading]);
 
+  useUpdateEffect(() => {
+    const cleanupListeners = () => {
+      if (iframeRef?.current?.contentDocument) {
+        const iframeDocument = iframeRef.current.contentDocument;
+        iframeDocument.removeEventListener("mouseover", handleMouseOver);
+        iframeDocument.removeEventListener("mouseout", handleMouseOut);
+        iframeDocument.removeEventListener("click", handleClick);
+      }
+    };
+
+    if (iframeRef?.current) {
+      const iframeDocument = iframeRef.current.contentDocument;
+      if (iframeDocument) {
+        cleanupListeners();
+
+        if (isEditableModeEnabled) {
+          iframeDocument.addEventListener("mouseover", handleMouseOver);
+          iframeDocument.addEventListener("mouseout", handleMouseOut);
+          iframeDocument.addEventListener("click", handleClick);
+        }
+      }
+    }
+
+    return cleanupListeners;
+  }, [iframeRef, isEditableModeEnabled]);
+
   const promoteVersion = async () => {
     setIsPromotingVersion(true);
     await api
@@ -305,6 +101,8 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
       .then((res) => {
         if (res.data.ok) {
           setCurrentCommit(null);
+          setPages(res.data.pages);
+          setCurrentPage(res.data.pages[0].path);
           toast.success("Version promoted successfully");
         }
       })
@@ -312,6 +110,99 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
         toast.error(err.response.data.error);
       });
     setIsPromotingVersion(false);
+  };
+
+  const handleMouseOver = (event: MouseEvent) => {
+    if (iframeRef?.current) {
+      const iframeDocument = iframeRef.current.contentDocument;
+      if (iframeDocument) {
+        const targetElement = event.target as HTMLElement;
+        if (
+          hoveredElement?.tagName !== targetElement.tagName ||
+          hoveredElement?.rect.top !==
+            targetElement.getBoundingClientRect().top ||
+          hoveredElement?.rect.left !==
+            targetElement.getBoundingClientRect().left ||
+          hoveredElement?.rect.width !==
+            targetElement.getBoundingClientRect().width ||
+          hoveredElement?.rect.height !==
+            targetElement.getBoundingClientRect().height
+        ) {
+          if (targetElement !== iframeDocument.body) {
+            const rect = targetElement.getBoundingClientRect();
+            setHoveredElement({
+              tagName: targetElement.tagName,
+              rect: {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              },
+            });
+            targetElement.classList.add("hovered-element");
+          } else {
+            return setHoveredElement(null);
+          }
+        }
+      }
+    }
+  };
+  const handleMouseOut = () => {
+    setHoveredElement(null);
+  };
+  const handleClick = (event: MouseEvent) => {
+    if (iframeRef?.current) {
+      const iframeDocument = iframeRef.current.contentDocument;
+      if (iframeDocument) {
+        const targetElement = event.target as HTMLElement;
+        if (targetElement !== iframeDocument.body) {
+          setSelectedElement(targetElement);
+        }
+      }
+    }
+  };
+
+  const handleCustomNavigation = (event: MouseEvent) => {
+    if (iframeRef?.current) {
+      const iframeDocument = iframeRef.current.contentDocument;
+      if (iframeDocument) {
+        const findClosestAnchor = (
+          element: HTMLElement
+        ): HTMLAnchorElement | null => {
+          let current = element;
+          while (current && current !== iframeDocument.body) {
+            if (current.tagName === "A") {
+              return current as HTMLAnchorElement;
+            }
+            current = current.parentElement as HTMLElement;
+          }
+          return null;
+        };
+
+        const anchorElement = findClosestAnchor(event.target as HTMLElement);
+        if (anchorElement) {
+          let href = anchorElement.getAttribute("href");
+          if (href) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            if (href.includes("#") && !href.includes(".html")) {
+              const targetElement = iframeDocument.querySelector(href);
+              if (targetElement) {
+                targetElement.scrollIntoView({ behavior: "smooth" });
+              }
+              return;
+            }
+
+            href = href.split(".html")[0] + ".html";
+            const isPageExist = pages.some((page) => page.path === href);
+            if (isPageExist) {
+              setCurrentPage(href);
+            }
+          }
+        }
+      }
+    }
   };
 
   return (
@@ -358,7 +249,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
           )}
           srcDoc={defaultHTML}
         />
-      ) : isLoadingProject || globalAiLoading ? (
+      ) : isLoadingProject || (globalAiLoading && !stableHtml) ? (
         <div className="w-full h-full flex items-center justify-center relative">
           <div className="py-10 w-full relative z-1 max-w-3xl mx-auto text-center">
             <AiLoading
@@ -368,12 +259,14 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
             <AnimatedBlobs />
             <AnimatedBlobs />
           </div>
-          <LivePreview
-            currentPageData={currentPageData}
-            isAiWorking={isAiWorking}
-            defaultHTML={defaultHTML}
-            className="bottom-4 left-4"
-          />
+          {!isLoadingProject && (
+            <LivePreview
+              currentPageData={currentPageData}
+              isAiWorking={isAiWorking}
+              defaultHTML={defaultHTML}
+              className="bottom-4 left-4"
+            />
+          )}
         </div>
       ) : (
         <>
@@ -395,9 +288,30 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
                   )}--rev-${currentCommit.slice(0, 7)}.static.hf.space`
                 : undefined
             }
-            srcDoc={
+            srcDoc={!currentCommit ? stableHtml : undefined}
+            onLoad={
               !currentCommit
-                ? injectInteractivityScript(stableHtml || "")
+                ? () => {
+                    if (iframeRef?.current?.contentWindow?.document?.body) {
+                      iframeRef.current.contentWindow.document.body.scrollIntoView(
+                        {
+                          block: isAiWorking ? "end" : "start",
+                          inline: "nearest",
+                          behavior: isAiWorking ? "instant" : "smooth",
+                        }
+                      );
+                    }
+                    // add event listener to all links in the iframe to handle navigation
+                    if (iframeRef?.current?.contentWindow?.document) {
+                      const links =
+                        iframeRef.current.contentWindow.document.querySelectorAll(
+                          "a"
+                        );
+                      links.forEach((link) => {
+                        link.addEventListener("click", handleCustomNavigation);
+                      });
+                    }
+                  }
                 : undefined
             }
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"

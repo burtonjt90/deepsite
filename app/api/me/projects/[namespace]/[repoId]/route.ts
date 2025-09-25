@@ -96,15 +96,6 @@ export async function GET(
         { status: 403 }
       );
     }
-    // if (space.private) {
-    //   return NextResponse.json(
-    //     {
-    //       ok: false,
-    //       error: "Space must be public to access it",
-    //     },
-    //     { status: 403 }
-    //   );
-    // }
 
     const repo: RepoDesignation = {
       type: "space",
@@ -145,7 +136,7 @@ export async function GET(
     }
     const commits: Commit[] = [];
     for await (const commit of listCommits({ repo, accessToken: user.token as string })) {
-      if (commit.title.includes("initial commit") || commit.title.includes("image(s)") || commit.title.includes("Promote version")) {
+      if (commit.title.includes("initial commit") || commit.title.includes("image(s)") || commit.title.includes("Removed files from promoting")) {
         continue;
       }
       commits.push({

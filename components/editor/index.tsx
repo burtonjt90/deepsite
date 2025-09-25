@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useCopyToClipboard } from "react-use";
 import { CopyIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { useAi } from "@/hooks/useAi";
 import { ListPages } from "./pages";
 import { AskAi } from "./ask-ai";
 import { Preview } from "./preview";
+import { SaveChangesPopup } from "./save-changes-popup";
 import Loading from "../loading";
 
 export const AppEditor = ({
@@ -32,13 +33,26 @@ export const AppEditor = ({
     currentPageData,
     currentTab,
     currentCommit,
+    hasUnsavedChanges,
+    saveChanges,
+    pages,
   } = useEditor(namespace, repoId);
   const { isAiWorking } = useAi();
   const [, copyToClipboard] = useCopyToClipboard();
+  const [showSavePopup, setShowSavePopup] = useState(false);
 
   const monacoRef = useRef<any>(null);
   const editor = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+
+  // Show save popup when there are unsaved changes
+  useEffect(() => {
+    if (hasUnsavedChanges && !isAiWorking) {
+      setShowSavePopup(true);
+    } else {
+      setShowSavePopup(false);
+    }
+  }, [hasUnsavedChanges, isAiWorking]);
 
   return (
     <section className="h-screen w-full bg-neutral-950 flex flex-col">
@@ -113,6 +127,16 @@ export const AppEditor = ({
         </div>
         <Preview isNew={isNew} />
       </main>
+
+      {/* Save Changes Popup */}
+      <SaveChangesPopup
+        isOpen={showSavePopup}
+        onClose={() => setShowSavePopup(false)}
+        onSave={saveChanges}
+        hasUnsavedChanges={hasUnsavedChanges}
+        pages={pages}
+        project={project}
+      />
     </section>
   );
 };
