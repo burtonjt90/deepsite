@@ -31,6 +31,7 @@ export async function GET() {
     }
   })) {
     if (
+      !space.private &&
       space.sdk === "static" &&
       Array.isArray((space.cardData as { tags?: string[] })?.tags) &&
       (
