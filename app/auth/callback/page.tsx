@@ -20,26 +20,21 @@ export default function AuthCallback({
 
   useMount(async () => {
     if (code) {
-      // Check if this is a popup window opened for authentication
-      // by checking if window.opener exists or if we can communicate with parent
       const isPopup = window.opener || window.parent !== window;
       setIsPopupAuth(isPopup);
 
       if (isPopup) {
-        // Broadcast the auth code to the parent window/iframe
         postMessage({
           type: "user-oauth",
           code: code,
         });
 
-        // Close this popup/tab after a short delay
         setTimeout(() => {
           if (window.opener) {
             window.close();
           }
         }, 1000);
       } else {
-        // Normal flow for direct navigation to callback
         await loginFromCode(code);
       }
     }

@@ -61,25 +61,20 @@ export const useUser = (initialData?: {
   const openLoginWindow = async () => {
     setCurrentRoute(window.location.pathname);
     
-    // If we're in an iframe and on mobile, open login in a new tab
-    if (isInIframe() && isMobileDevice()) {
+    if (isInIframe()) {
       try {
-        // Get the login URL from the server
         const response = await api.get("/auth/login-url");
         const { loginUrl } = response.data;
         
-        // Open in new tab for mobile iframe users
         window.open(loginUrl, "_blank", "noopener,noreferrer");
         
         toast.info("Login opened in new tab. Please complete authentication and return to this page.");
         return;
       } catch (error) {
         console.error("Failed to open login in new tab:", error);
-        // Fall back to normal flow if opening new tab fails
       }
     }
     
-    // Normal login flow for non-iframe or non-mobile users
     return router.push("/auth");
   };
 
@@ -90,8 +85,6 @@ export const useUser = (initialData?: {
       .post("/auth", { code })
       .then(async (res: any) => {
         if (res.data) {
-          // Cookie is now set server-side with proper iframe attributes
-          // Also store fallback data for iframe contexts
           if (res.data.useLocalStorageFallback) {
             storeAuthDataFallback(res.data.access_token, res.data.user);
           }
@@ -119,9 +112,7 @@ export const useUser = (initialData?: {
 
   const logout = async () => {
     try {
-      // Call server endpoint to clear the HTTP-only cookie
       await api.post("/auth/logout");
-      // Clear fallback storage
       clearAuthDataFallback();
       removeCurrentRoute();
       client.setQueryData(["user.me"], { user: null, errCode: null });
@@ -131,7 +122,6 @@ export const useUser = (initialData?: {
       window.location.reload();
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if server call fails, clear client state
       clearAuthDataFallback();
       removeCurrentRoute();
       client.setQueryData(["user.me"], { user: null, errCode: null });
