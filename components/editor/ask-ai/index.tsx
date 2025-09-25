@@ -28,6 +28,7 @@ import { useLoginModal } from "@/components/contexts/login-context";
 import { Settings } from "./settings";
 import { useProModal } from "@/components/contexts/pro-context";
 import { MODELS } from "@/lib/providers";
+import { MAX_FREE_PROJECTS } from "@/lib/utils";
 
 export const AskAi = ({
   project,
@@ -39,7 +40,7 @@ export const AskAi = ({
   isNew?: boolean;
   onScrollToBottom?: () => void;
 }) => {
-  const { user } = useUser();
+  const { user, projects } = useUser();
   const { currentPageData, isUploading, pages, isLoadingProject } = useEditor();
   const {
     isAiWorking,
@@ -86,6 +87,8 @@ export const AskAi = ({
 
   const callAi = async (redesignMarkdown?: string) => {
     if (!user) return openLoginModal();
+    if (!user.isPro && projects.length >= MAX_FREE_PROJECTS)
+      return openProModal([]);
     if (isAiWorking) return;
     if (!redesignMarkdown && !prompt.trim()) return;
 

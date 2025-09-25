@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCookie } from "react-use";
 import { useRouter } from "next/navigation";
 
-import { User } from "@/types";
+import { ProjectType, User } from "@/types";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { 
@@ -19,6 +19,7 @@ import {
 export const useUser = (initialData?: {
   user: User | null;
   errCode: number | null;
+  projects: ProjectType[];
 }) => {
   const client = useQueryClient();
   const router = useRouter();
@@ -56,6 +57,18 @@ export const useUser = (initialData?: {
   });
   const setLoadingAuth = (value: boolean) => {
     client.setQueryData(["setLoadingAuth"], value);
+  };
+
+  const { data: projects } = useQuery({
+    queryKey: ["me.projects"],
+    queryFn: async () => [],
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    initialData: initialData?.projects || [],
+  });
+  const setProjects = (projects: ProjectType[]) => {
+    client.setQueryData(["me.projects"], projects);
   };
 
   const openLoginWindow = async () => {
@@ -119,12 +132,15 @@ export const useUser = (initialData?: {
       router.push("/");
       toast.success("Logout successful");
       client.invalidateQueries({ queryKey: ["user.me"] });
+      client.invalidateQueries({ queryKey: ["me.projects"] });
       window.location.reload();
     } catch (error) {
       console.error("Logout error:", error);
       clearAuthDataFallback();
       removeCurrentRoute();
       client.setQueryData(["user.me"], { user: null, errCode: null });
+      client.invalidateQueries({ queryKey: ["user.me"] });
+      client.invalidateQueries({ queryKey: ["me.projects"] });
       router.push("/");
       toast.success("Logout successful");
       window.location.reload();
@@ -133,6 +149,8 @@ export const useUser = (initialData?: {
 
   return {
     user,
+    projects,
+    setProjects,
     errCode,
     loading: isLoading || loadingAuth,
     openLoginWindow,

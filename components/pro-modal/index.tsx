@@ -24,7 +24,10 @@ export const ProModal = ({
   };
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg lg:!p-8 !rounded-3xl !bg-white !border-neutral-100">
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-lg lg:!p-8 !rounded-3xl !bg-white !border-neutral-100"
+      >
         <DialogTitle className="hidden" />
         <main className="flex flex-col items-start text-left relative pt-2">
           <div className="flex items-center justify-start -space-x-4 mb-5">
@@ -72,6 +75,7 @@ export const ProModal = ({
           <Button
             variant="black"
             size="lg"
+            tabIndex={-1}
             className="w-full !text-base !h-11 mt-8"
             onClick={handleProClick}
           >

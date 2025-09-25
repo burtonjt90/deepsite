@@ -12,23 +12,22 @@ import { ProTag } from "@/components/pro-modal";
 import { Button } from "@/components/ui/button";
 import { useProModal } from "@/components/contexts/pro-context";
 import { api } from "@/lib/api";
+import { NotLogged } from "../not-logged/not-logged";
 
-export function MyProjects({
-  projects: initialProjects,
-}: {
-  projects: ProjectType[];
-}) {
-  const { user } = useUser();
+export function MyProjects() {
+  const { user, projects, setProjects } = useUser();
   const { openProModal } = useProModal();
-  const [projects, setProjects] = useState<ProjectType[]>(
-    initialProjects || []
-  );
+
+  if (!user) {
+    return <NotLogged />;
+  }
 
   const onDelete = async (project: ProjectType) => {
     const response = await api.delete(`/me/projects/${project.name}`);
     if (response.data.ok) {
       toast.success("Project deleted successfully!");
-      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+      const newProjects = projects.filter((p) => p.id !== project.id);
+      setProjects(newProjects);
     } else {
       toast.error(response.data.error);
     }

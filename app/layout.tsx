@@ -72,16 +72,16 @@ export const viewport: Viewport = {
 async function getMe() {
   const cookieStore = await cookies();
   const token = cookieStore.get(MY_TOKEN_KEY())?.value;
-  if (!token) return { user: null, errCode: null };
+  if (!token) return { user: null, projects: [], errCode: null };
   try {
     const res = await apiServer.get("/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
-    return { user: res.data.user, errCode: null };
+    return { user: res.data.user, projects: res.data.projects, errCode: null };
   } catch (err: any) {
-    return { user: null, errCode: err.status };
+    return { user: null, projects: [], errCode: err.status };
   }
 }
 

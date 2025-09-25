@@ -1,3 +1,4 @@
+import { listSpaces } from "@huggingface/hub";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
@@ -21,5 +22,26 @@ export async function GET() {
     );
   }
   const user = await userResponse.json();
-  return NextResponse.json({ user, errCode: null }, { status: 200 });
+  const projects = [];
+  for await (const space of listSpaces({
+    accessToken: token.replace("Bearer ", "") as string,
+    additionalFields: ["author", "cardData"],
+    search: {
+      owner: user.name,
+    }
+  })) {
+    if (
+      !space.private &&
+      space.sdk === "static" &&
+      Array.isArray((space.cardData as { tags?: string[] })?.tags) &&
+      (
+        ((space.cardData as { tags?: string[] })?.tags?.includes("deepsite-v3")) ||
+        ((space.cardData as { tags?: string[] })?.tags?.includes("deepsite"))
+      )
+    ) {
+      projects.push(space);
+    }
+  }
+
+  return NextResponse.json({ user, projects, errCode: null }, { status: 200 });
 }

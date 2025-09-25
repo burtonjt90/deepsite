@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useUser } from "@/hooks/useUser";
-import { User } from "@/types";
+import { ProjectType, User } from "@/types";
 import { useBroadcastChannel } from "@/lib/useBroadcastChannel";
 
 export default function AppContext({
@@ -15,6 +15,7 @@ export default function AppContext({
   children: React.ReactNode;
   me?: {
     user: User | null;
+    projects: ProjectType[];
     errCode: number | null;
   };
 }) {
