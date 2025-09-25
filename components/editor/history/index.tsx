@@ -12,7 +12,7 @@ import { useEditor } from "@/hooks/useEditor";
 import classNames from "classnames";
 
 export function History() {
-  const { commits, currentCommit, setCurrentCommit } = useEditor();
+  const { commits, currentCommit, setCurrentCommit, project } = useEditor();
   const [open, setOpen] = useState(false);
 
   if (commits.length === 0) return null;
@@ -37,6 +37,14 @@ export function History() {
           History
         </header>
         <main className="space-y-3">
+          {project?.private && (
+            <div className="px-4 pt-3">
+              <p className="text-amber-500 text-xs px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                As this project is private, you can't see the history of
+                changes.
+              </p>
+            </div>
+          )}
           <ul className="max-h-[250px] overflow-y-auto">
             {commits?.map((item: Commit, index: number) => (
               <li
@@ -72,20 +80,22 @@ export function History() {
                       Current version
                     </span>
                   ) : (
-                    <Button
-                      variant="link"
-                      size="xss"
-                      className="text-gray-400 hover:text-gray-200"
-                      onClick={() => {
-                        if (index === 0) {
-                          setCurrentCommit(null);
-                        } else {
-                          setCurrentCommit(item.oid);
-                        }
-                      }}
-                    >
-                      See version
-                    </Button>
+                    !project?.private && (
+                      <Button
+                        variant="link"
+                        size="xss"
+                        className="text-gray-400 hover:text-gray-200"
+                        onClick={() => {
+                          if (index === 0) {
+                            setCurrentCommit(null);
+                          } else {
+                            setCurrentCommit(item.oid);
+                          }
+                        }}
+                      >
+                        See version
+                      </Button>
+                    )
                   )}
                 </div>
               </li>
