@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
   try {
     const spaceDomain = `${spaceId.replace("/", "-")}${commitId !== null? `--rev-${commitId.slice(0, 7)}` : ""}.static.hf.space`;
     const targetUrl = `https://${spaceDomain}${path}`;
+
+    console.log("targetUrl", targetUrl);
         
     const response = await fetch(targetUrl, {
       headers: {
@@ -225,12 +227,10 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Frame-Options': 'SAMEORIGIN',
       },
     });
 
   } catch (error) {
-    console.error('Proxy error:', error);
     return NextResponse.json({ 
       error: "Proxy request failed", 
       details: error instanceof Error ? error.message : String(error),

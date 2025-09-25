@@ -5,9 +5,9 @@ export async function GET(req: NextRequest) {
   
   let url: string;
   if (process.env.NODE_ENV === "production") {
-    url = "deepsite.hf.co";
+    url = "enzostvs-deepsite-v3.hf.space’";
   } else if (host.includes("/spaces/enzostvs")) {
-    url = "enzostvs-deepsite.hf.space";
+    url = "enzostvs-deepsite-v3.hf.space";
   } else {
     url = host;
   }
