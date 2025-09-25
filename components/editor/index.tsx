@@ -25,10 +25,15 @@ export const AppEditor = ({
   repoId?: string;
   isNew?: boolean;
 }) => {
-  const { project, setPages, files, currentPageData, currentTab } = useEditor(
-    namespace,
-    repoId
-  );
+  const {
+    project,
+    setPages,
+    files,
+    currentPageData,
+    currentTab,
+    currentCommit,
+  } = useEditor(namespace, repoId);
+  const { isAiWorking } = useAi();
   const [, copyToClipboard] = useCopyToClipboard();
 
   const monacoRef = useRef<any>(null);
@@ -71,10 +76,11 @@ export const AppEditor = ({
                 horizontal: "hidden",
               },
               wordWrap: "on",
-              readOnly: true,
+              readOnly: !!isAiWorking || !!currentCommit,
               readOnlyMessage: {
-                value:
-                  "You can't edit the code, ask DeepSite to do it for you!",
+                value: currentCommit
+                  ? "You can't edit the code, as this is an old version of the project."
+                  : "Wait for DeepSite to finish working...",
                 isTrusted: true,
               },
             }}

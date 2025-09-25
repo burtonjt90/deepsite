@@ -67,7 +67,10 @@ export function ProjectCard({
         ) : (
           <div className="absolute inset-0 w-full h-full overflow-hidden">
             <iframe
-              src={`/api/proxy/?spaceId=${encodeURIComponent(project.name)}`}
+              src={`https://${project.name.replaceAll(
+                "/",
+                "-"
+              )}.static.hf.space`}
               className="w-[1200px] h-[675px] border-0 origin-top-left"
               style={{
                 transform: "scale(0.5)",

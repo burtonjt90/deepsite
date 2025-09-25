@@ -14,13 +14,8 @@ import { AiLoading } from "../ask-ai/loading";
 import { defaultHTML } from "@/lib/consts";
 import { Button } from "@/components/ui/button";
 import { LivePreview } from "../live-preview";
-import {
-  MousePointerClick,
-  History,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { HistoryNotification } from "../history-notification";
+import { AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import Loading from "@/components/loading";
@@ -34,26 +29,20 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     currentCommit,
     setCurrentCommit,
     currentPageData,
+    pages,
+    setCurrentPage,
   } = useEditor();
   const {
     isEditableModeEnabled,
     setSelectedElement,
     isAiWorking,
+    globalAiLoading,
     setIsEditableModeEnabled,
   } = useAi();
 
-  const iframeSrc = project?.space_id
-    ? `/api/proxy/?spaceId=${encodeURIComponent(project.space_id)}${
-        currentCommit ? `&commitId=${currentCommit}` : ""
-      }`
-    : "";
-
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // For private projects, use srcDoc instead of proxy URL
-  const shouldUseCustomIframe = project?.private && currentPageData?.html;
-
-  // Inject event handling script for private projects
+  // Inject event handling script
   const injectInteractivityScript = (html: string) => {
     const interactivityScript = `
       <script>        
@@ -112,6 +101,43 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
                   element: event.target.outerHTML
                 }
               }, '*');
+            } else {
+              // Handle link clicks to navigate between pages
+              const link = event.target.closest('a');
+              if (link && link.href) {
+                event.preventDefault();
+                
+                const url = new URL(link.href, window.location.href);
+                
+                // Check if it's a relative link (same origin)
+                if (url.origin === window.location.origin || link.href.startsWith('/') || link.href.startsWith('./') || link.href.startsWith('../') || !link.href.includes('://')) {
+                  // Extract the path from the link
+                  let targetPath = link.getAttribute('href') || '';
+                  
+                  // Handle relative paths
+                  if (targetPath.startsWith('./')) {
+                    targetPath = targetPath.substring(2);
+                  } else if (targetPath.startsWith('/')) {
+                    targetPath = targetPath.substring(1);
+                  }
+                  
+                  // If no extension, assume .html
+                  if (!targetPath.includes('.') && !targetPath.includes('?') && !targetPath.includes('#')) {
+                    targetPath = targetPath === '' ? 'index.html' : targetPath + '.html';
+                  }
+                  
+                  // Send message to parent to navigate to the page
+                  parent.postMessage({
+                    type: 'NAVIGATE_TO_PAGE',
+                    data: {
+                      targetPath: targetPath
+                    }
+                  }, '*');
+                } else {
+                  // External link - open in new tab
+                  window.open(link.href, '_blank');
+                }
+              }
             }
           });
           
@@ -146,7 +172,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
           
           // Notify parent that script is ready
           parent.postMessage({
-            type: 'PROXY_SCRIPT_READY'
+            type: 'IFRAME_SCRIPT_READY'
           }, '*');
         });
       </script>
@@ -163,9 +189,8 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     tagName: string;
     rect: { top: number; left: number; width: number; height: number };
   } | null>(null);
-  const [isHistoryNotificationCollapsed, setIsHistoryNotificationCollapsed] =
-    useState(false);
   const [isPromotingVersion, setIsPromotingVersion] = useState(false);
+  const [stableHtml, setStableHtml] = useState<string>("");
 
   // Handle PostMessage communication with iframe
   useEffect(() => {
@@ -177,7 +202,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
 
       const { type, data } = event.data;
       switch (type) {
-        case "PROXY_SCRIPT_READY":
+        case "IFRAME_SCRIPT_READY":
           if (iframeRef.current?.contentWindow) {
             iframeRef.current.contentWindow.postMessage(
               {
@@ -210,10 +235,20 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
             setIsEditableModeEnabled(false);
           }
           break;
-        case "NAVIGATE_TO_PROXY":
-          // Handle navigation within the iframe while maintaining proxy context
-          if (iframeRef.current && data.proxyUrl) {
-            iframeRef.current.src = data.proxyUrl;
+        case "NAVIGATE_TO_PAGE":
+          // Handle navigation between pages by updating currentPageData
+          if (data.targetPath) {
+            // Find the page in the pages array
+            const targetPage = pages.find(
+              (page) => page.path === data.targetPath
+            );
+            if (targetPage) {
+              setCurrentPage(data.targetPath);
+            } else {
+              // If page doesn't exist, you might want to create it or show an error
+              console.warn(`Page not found: ${data.targetPath}`);
+              toast.error(`Page not found: ${data.targetPath}`);
+            }
           }
           break;
       }
@@ -221,7 +256,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [setSelectedElement, isEditableModeEnabled]);
+  }, [setSelectedElement, isEditableModeEnabled, pages, setCurrentPage]);
 
   // Send edit mode state to iframe and clear hover state when disabled
   useUpdateEffect(() => {
@@ -240,12 +275,26 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
     if (!isEditableModeEnabled) {
       setHoveredElement(null);
     }
-  }, [
-    isEditableModeEnabled,
-    project?.space_id,
-    shouldUseCustomIframe,
-    currentPageData?.html,
-  ]);
+  }, [isEditableModeEnabled, stableHtml]);
+
+  // Update stable HTML only when AI finishes working to prevent blinking
+  useEffect(() => {
+    if (!isAiWorking && !globalAiLoading && currentPageData?.html) {
+      setStableHtml(currentPageData.html);
+    }
+  }, [isAiWorking, globalAiLoading, currentPageData?.html]);
+
+  // Initialize stable HTML when component first loads
+  useEffect(() => {
+    if (
+      currentPageData?.html &&
+      !stableHtml &&
+      !isAiWorking &&
+      !globalAiLoading
+    ) {
+      setStableHtml(currentPageData.html);
+    }
+  }, [currentPageData?.html, stableHtml, isAiWorking, globalAiLoading]);
 
   const promoteVersion = async () => {
     setIsPromotingVersion(true);
@@ -298,7 +347,7 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
           </span>
         </div>
       )}
-      {isNew && !isAiWorking ? (
+      {isNew && !isLoadingProject ? (
         <iframe
           className={classNames(
             "w-full select-none transition-all duration-200 bg-black h-full",
@@ -309,18 +358,11 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
           )}
           srcDoc={defaultHTML}
         />
-      ) : iframeSrc === "" ||
-        isLoadingProject ||
-        (isAiWorking && iframeSrc == "") ||
-        (shouldUseCustomIframe && !currentPageData?.html) ? (
+      ) : isLoadingProject || globalAiLoading ? (
         <div className="w-full h-full flex items-center justify-center relative">
           <div className="py-10 w-full relative z-1 max-w-3xl mx-auto text-center">
             <AiLoading
-              text={
-                isAiWorking && iframeSrc === ""
-                  ? undefined
-                  : "Fetching your space..."
-              }
+              text={isLoadingProject ? "Fetching your project..." : undefined}
               className="flex-col"
             />
             <AnimatedBlobs />
@@ -345,94 +387,28 @@ export const Preview = ({ isNew }: { isNew: boolean }) => {
                   device === "mobile",
               }
             )}
-            {...(shouldUseCustomIframe
-              ? {
-                  srcDoc: injectInteractivityScript(
-                    currentPageData?.html || ""
-                  ),
-                }
-              : { src: iframeSrc })}
+            src={
+              currentCommit
+                ? `https://${project?.space_id?.replaceAll(
+                    "/",
+                    "-"
+                  )}--rev-${currentCommit.slice(0, 7)}.static.hf.space`
+                : undefined
+            }
+            srcDoc={
+              !currentCommit
+                ? injectInteractivityScript(stableHtml || "")
+                : undefined
+            }
+            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
             allow="accelerometer; ambient-light-sensor; autoplay; battery; camera; clipboard-read; clipboard-write; display-capture; document-domain; encrypted-media; fullscreen; geolocation; gyroscope; layout-animations; legacy-image-formats; magnetometer; microphone; midi; oversized-images; payment; picture-in-picture; publickey-credentials-get; serial; sync-xhr; usb; vr ; wake-lock; xr-spatial-tracking"
           />
-          <div
-            className={classNames(
-              "absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-sm border border-neutral-200 rounded-xl shadow-lg transition-all duration-300 ease-in-out",
-              {
-                hidden: !currentCommit,
-              }
-            )}
-          >
-            {isHistoryNotificationCollapsed ? (
-              // Collapsed state
-              <div className="flex items-center gap-2 p-3">
-                <History className="size-4 text-neutral-600" />
-                <span className="text-xs text-neutral-600 font-medium">
-                  Historical Version
-                </span>
-                <Button
-                  variant="outline"
-                  size="iconXs"
-                  className="!rounded-md !border-neutral-200"
-                  onClick={() => setIsHistoryNotificationCollapsed(false)}
-                >
-                  <ChevronUp className="text-neutral-400 size-3" />
-                </Button>
-              </div>
-            ) : (
-              // Expanded state
-              <div className="p-4 max-w-sm w-full">
-                <div className="flex items-start gap-3">
-                  <History className="size-4 text-neutral-600 translate-y-1.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-sm text-neutral-800">
-                          Historical Version
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="iconXs"
-                        className="!rounded-md !border-neutral-200"
-                        onClick={() => setIsHistoryNotificationCollapsed(true)}
-                      >
-                        <ChevronDown className="text-neutral-400 size-3" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-neutral-600 leading-relaxed mb-3">
-                      You're viewing a previous version of this project. Promote
-                      this version to make it current and deploy it live.
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="xs"
-                        variant="black"
-                        className="!pr-3"
-                        onClick={() => promoteVersion()}
-                        disabled={isPromotingVersion}
-                      >
-                        {isPromotingVersion ? (
-                          <Loading overlay={false} />
-                        ) : (
-                          <MousePointerClick className="size-3" />
-                        )}
-                        Promote Version
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        className=" !text-neutral-600 !border-neutral-200"
-                        disabled={isPromotingVersion}
-                        onClick={() => setCurrentCommit(null)}
-                      >
-                        Go back to current
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <HistoryNotification
+            isVisible={!!currentCommit}
+            isPromotingVersion={isPromotingVersion}
+            onPromoteVersion={promoteVersion}
+            onGoBackToCurrent={() => setCurrentCommit(null)}
+          />
         </>
       )}
     </div>
