@@ -4,12 +4,12 @@ export async function GET(req: NextRequest) {
   const host = req.headers.get("host") ?? "localhost:3000";
   
   let url: string;
-  if (process.env.NODE_ENV === "production") {
-    url = "enzostvs-deepsite-v3.hf.space";
-  } else if (host.includes("/spaces/enzostvs")) {
-    url = "enzostvs-deepsite-v3.hf.space";
-  } else {
+  if (host.includes("localhost")) {
     url = host;
+  } else if (host.includes("hf.space") || host.includes("/spaces/enzostvs")) {
+    url = "enzostvs-deepsite.hf.space";
+  } else {
+    url = "deepsite.hf.co";
   }
   
   const redirect_uri =
