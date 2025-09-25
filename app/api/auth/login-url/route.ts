@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   const host = req.headers.get("host") ?? "localhost:3000";
-  const url = host.includes("/spaces/enzostvs")
-    ? "enzostvs-deepsite.hf.space"
-    : host;
+  
+  let url: string;
+  if (process.env.NODE_ENV === "production") {
+    url = "deepsite.hf.co";
+  } else if (host.includes("/spaces/enzostvs")) {
+    url = "enzostvs-deepsite.hf.space";
+  } else {
+    url = host;
+  }
+  
   const redirect_uri =
     `${host.includes("localhost") ? "http://" : "https://"}` +
     url +
