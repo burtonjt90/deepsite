@@ -16,13 +16,15 @@ import {
   SEARCH_START,
   UPDATE_PAGE_START,
   UPDATE_PAGE_END,
+  PROMPT_FOR_PROJECT_NAME,
 } from "@/lib/prompts";
 import MY_TOKEN_KEY from "@/lib/get-cookie-name";
 import { Page } from "@/types";
-import { uploadFiles } from "@huggingface/hub";
+import { createRepo, RepoDesignation, uploadFiles } from "@huggingface/hub";
 import { isAuthenticated } from "@/lib/auth";
 import { getBestProvider } from "@/lib/best-provider";
 import { rewritePrompt } from "@/lib/rewrite-prompt";
+import { COLORS } from "@/lib/utils";
 
 const ipAddresses = new Map();
 
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
   const userToken = request.cookies.get(MY_TOKEN_KEY())?.value;
 
   const body = await request.json();
-  const { prompt, provider, model, redesignMarkdown, enhancedSettings } = body;
+  const { prompt, provider, model, redesignMarkdown, enhancedSettings, pages } = body;
 
   if (!model || (!prompt && !redesignMarkdown)) {
     return NextResponse.json(
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
               },
               {
                 role: "user",
-                content: `${rewrittenPrompt}${redesignMarkdown ? `\n\nHere is my current design as a markdown:\n\n${redesignMarkdown}\n\nNow, please create a new design based on this markdown. Use the images in the markdown.` : ""}`
+                content: `${rewrittenPrompt}${redesignMarkdown ? `\n\nHere is my current design as a markdown:\n\n${redesignMarkdown}\n\nNow, please create a new design based on this markdown. Use the images in the markdown.` : ""} : ""}`
               },
             ],
             max_tokens: selectedProvider.max_tokens,
@@ -220,10 +222,12 @@ export async function PUT(request: NextRequest) {
   const authHeaders = await headers();
 
   const body = await request.json();
-  const { prompt, previousPrompts, provider, selectedElementHtml, model, pages, files, repoId } =
+  const { prompt, previousPrompts, provider, selectedElementHtml, model, pages, files, repoId: repoIdFromBody, isNew, enhancedSettings } =
     body;
 
-  if (!prompt || pages.length === 0 || !repoId) {
+  let repoId = repoIdFromBody;
+
+  if (!prompt || pages.length === 0) {
     return NextResponse.json(
       { ok: false, error: "Missing required fields" },
       { status: 400 }
@@ -300,7 +304,7 @@ export async function PUT(request: NextRequest) {
         messages: [
           {
             role: "system",
-            content: FOLLOW_UP_SYSTEM_PROMPT,
+            content: FOLLOW_UP_SYSTEM_PROMPT + (isNew ? PROMPT_FOR_PROJECT_NAME : ""),
           },
           {
             role: "user",
@@ -514,6 +518,42 @@ export async function PUT(request: NextRequest) {
         files.push(file);
       });
 
+      if (isNew) {
+        const projectName = chunk.match(/<<<<<<< PROJECT_NAME_START ([\s\S]*?) >>>>>>> PROJECT_NAME_END/)?.[1]?.trim();
+        const formattedTitle = projectName?.toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .split("-")
+          .filter(Boolean)
+          .join("-")
+          .slice(0, 96);
+        const repo: RepoDesignation = {
+          type: "space",
+          name: `${user.name}/${formattedTitle}`,
+        };
+        const { repoUrl} = await createRepo({
+          repo,
+          accessToken: user.token as string,
+        });
+        repoId = repoUrl.split("/").slice(-2).join("/");
+        const colorFrom = COLORS[Math.floor(Math.random() * COLORS.length)];
+        const colorTo = COLORS[Math.floor(Math.random() * COLORS.length)];
+        const README = `---
+title: ${projectName}
+colorFrom: ${colorFrom}
+colorTo: ${colorTo}
+emoji: 🐳
+sdk: static
+pinned: false
+tags:
+  - deepsite-v3
+---
+
+# Welcome to your new DeepSite project!
+This project was created with [DeepSite](https://deepsite.hf.co).
+      `;
+        files.push(new File([README], "README.md", { type: "text/markdown" }));
+      }
+
       const response = await uploadFiles({
         repo: {
           type: "space",
@@ -528,6 +568,7 @@ export async function PUT(request: NextRequest) {
         ok: true,
         updatedLines,
         pages: updatedPages,
+        repoId,
         commit: {
           ...response.commit,
           title: prompt,

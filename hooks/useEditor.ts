@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { defaultHTML } from "@/lib/consts";
 import { Commit, HtmlHistory, Page, Project } from "@/types";
 import { api } from "@/lib/api";
+import { isTheSameHtml } from "@/lib/compare-html-diff";
 
 export const useEditor = (namespace?: string, repoId?: string) => {
   const client = useQueryClient();
@@ -60,7 +61,7 @@ export const useEditor = (namespace?: string, repoId?: string) => {
   const { data: pages = [] } = useQuery<Page[]>({
     queryKey: ["editor.pages"],
     queryFn: async (): Promise<Page[]> => {
-      return pagesStorage ?? [
+      return [
         {
           path: "index.html",
           html: defaultHTML,
@@ -71,7 +72,7 @@ export const useEditor = (namespace?: string, repoId?: string) => {
     refetchOnReconnect: false,
     refetchOnMount: false,
     retry: false,
-    initialData: pagesStorage ?? [
+    initialData: [
       {
         path: "index.html",
         html: defaultHTML,
@@ -319,6 +320,10 @@ export const useEditor = (namespace?: string, repoId?: string) => {
     }
   }, [namespace, repoId])
 
+  const isSameHtml = useMemo(() => {
+    return isTheSameHtml(currentPageData.html);
+  }, [pages]);
+
   return {
     isLoadingProject,
     project,
@@ -341,6 +346,7 @@ export const useEditor = (namespace?: string, repoId?: string) => {
     currentCommit,
     setCurrentCommit,
     setProject,
+    isSameHtml,
     isUploading: uploadFilesMutation.isPending,
     globalEditorLoading: uploadFilesMutation.isPending || isLoadingProject,
     // Unsaved changes functionality

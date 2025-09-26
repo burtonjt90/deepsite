@@ -74,21 +74,25 @@ If it's a new page, you MUST applied the following NEW_PAGE_START and UPDATE_PAG
 ${PROMPT_FOR_IMAGE_GENERATION}
 Do NOT explain the changes or what you did, just return the expected results.
 Update Format Rules:
-1. Start with ${UPDATE_PAGE_START}
-2. Provide the name of the page you are modifying.
-3. Close the start tag with the ${UPDATE_PAGE_END}.
-4. Start with ${SEARCH_START}
-5. Provide the exact lines from the current code that need to be replaced.
-6. Use ${DIVIDER} to separate the search block from the replacement.
-7. Provide the new lines that should replace the original lines.
-8. End with ${REPLACE_END}
-9. You can use multiple SEARCH/REPLACE blocks if changes are needed in different parts of the file.
-10. To insert code, use an empty SEARCH block (only ${SEARCH_START} and ${DIVIDER} on their lines) if inserting at the very beginning, otherwise provide the line *before* the insertion point in the SEARCH block and include that line plus the new lines in the REPLACE block.
-11. To delete code, provide the lines to delete in the SEARCH block and leave the REPLACE block empty (only ${DIVIDER} and ${REPLACE_END} on their lines).
-12. IMPORTANT: The SEARCH block must *exactly* match the current code, including indentation and whitespace.
+1. Start with ${PROJECT_NAME_START}.
+2. Add the name of the project, right after the start tag.
+3. Close the start tag with the ${PROJECT_NAME_END}.
+4. Start with ${UPDATE_PAGE_START}
+5. Provide the name of the page you are modifying.
+6. Close the start tag with the ${UPDATE_PAGE_END}.
+7. Start with ${SEARCH_START}
+8. Provide the exact lines from the current code that need to be replaced.
+9. Use ${DIVIDER} to separate the search block from the replacement.
+10. Provide the new lines that should replace the original lines.
+11. End with ${REPLACE_END}
+12. You can use multiple SEARCH/REPLACE blocks if changes are needed in different parts of the file.
+13. To insert code, use an empty SEARCH block (only ${SEARCH_START} and ${DIVIDER} on their lines) if inserting at the very beginning, otherwise provide the line *before* the insertion point in the SEARCH block and include that line plus the new lines in the REPLACE block.
+14. To delete code, provide the lines to delete in the SEARCH block and leave the REPLACE block empty (only ${DIVIDER} and ${REPLACE_END} on their lines).
+15. IMPORTANT: The SEARCH block must *exactly* match the current code, including indentation and whitespace.
 Example Modifying Code:
 \`\`\`
 Some explanation...
+${PROJECT_NAME_START}Project Name${PROJECT_NAME_END}
 ${UPDATE_PAGE_START}index.html${UPDATE_PAGE_END}
 ${SEARCH_START}
     <h1>Old Title</h1>

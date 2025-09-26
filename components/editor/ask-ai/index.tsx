@@ -41,7 +41,7 @@ export const AskAi = ({
   onScrollToBottom?: () => void;
 }) => {
   const { user, projects } = useUser();
-  const { currentPageData, isUploading, pages, isLoadingProject } = useEditor();
+  const { isSameHtml, isUploading, pages, isLoadingProject } = useEditor();
   const {
     isAiWorking,
     isThinking,
@@ -75,10 +75,6 @@ export const AskAi = ({
   const [think, setThink] = useState("");
   const [openThink, setOpenThink] = useState(false);
 
-  const isSameHtml = useMemo(() => {
-    return isTheSameHtml(currentPageData.html);
-  }, [currentPageData.html]);
-
   const handleThink = (think: string) => {
     setThink(think);
     setIsThinking(true);
@@ -93,7 +89,7 @@ export const AskAi = ({
     if (!redesignMarkdown && !prompt.trim()) return;
 
     if (isFollowUp && !redesignMarkdown && !isSameHtml) {
-      const result = await callAiFollowUp(prompt, enhancedSettings);
+      const result = await callAiFollowUp(prompt, enhancedSettings, isNew);
 
       if (result?.error) {
         handleError(result.error, result.message);
@@ -223,7 +219,7 @@ export const AskAi = ({
           />
         </div>
         <div className="flex items-center justify-between gap-2 px-4 pb-3 mt-2">
-          <div className="flex-1 flex items-center justify-start gap-1.5">
+          <div className="flex-1 flex items-center justify-start gap-1.5 flex-wrap">
             <PromptBuilder
               enhancedSettings={enhancedSettings!}
               setEnhancedSettings={setEnhancedSettings}

@@ -33,6 +33,7 @@ export const Preview = forwardRef<LivePreviewRef, { isNew: boolean }>(
       pages,
       setPages,
       setCurrentPage,
+      isSameHtml,
     } = useEditor();
     const {
       isEditableModeEnabled,
@@ -239,7 +240,7 @@ export const Preview = forwardRef<LivePreviewRef, { isNew: boolean }>(
             </span>
           </div>
         )}
-        {isNew && !isLoadingProject && !globalAiLoading ? (
+        {isNew && !isLoadingProject && !globalAiLoading && isSameHtml ? (
           <iframe
             className={classNames(
               "w-full select-none transition-all duration-200 bg-black h-full",

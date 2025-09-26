@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useCopyToClipboard } from "react-use";
+import { useCopyToClipboard, useMount } from "react-use";
 import { CopyIcon } from "lucide-react";
 import { toast } from "sonner";
 import classNames from "classnames";
@@ -10,6 +10,7 @@ import Editor from "@monaco-editor/react";
 import { useEditor } from "@/hooks/useEditor";
 import { Header } from "@/components/editor/header";
 import { useAi } from "@/hooks/useAi";
+import { defaultHTML } from "@/lib/consts";
 
 import { ListPages } from "./pages";
 import { AskAi } from "./ask-ai";
@@ -47,7 +48,17 @@ export const AppEditor = ({
   const editor = useRef<HTMLDivElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
-  // Show save popup when there are unsaved changes
+  useMount(() => {
+    if (isNew) {
+      setPages([
+        {
+          path: "index.html",
+          html: defaultHTML,
+        },
+      ]);
+    }
+  });
+
   useEffect(() => {
     if (hasUnsavedChanges && !isAiWorking) {
       setShowSavePopup(true);
@@ -92,11 +103,9 @@ export const AppEditor = ({
                 horizontal: "hidden",
               },
               wordWrap: "on",
-              readOnly: !!isAiWorking || !!currentCommit || isNew,
+              readOnly: !!isAiWorking || !!currentCommit,
               readOnlyMessage: {
-                value: isNew
-                  ? "You can't edit the code, as this is a new project. Ask DeepSite first."
-                  : currentCommit
+                value: currentCommit
                   ? "You can't edit the code, as this is an old version of the project."
                   : "Wait for DeepSite to finish working...",
                 isTrusted: true,

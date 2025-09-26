@@ -14,7 +14,7 @@ import { LivePreviewRef } from "@/components/editor/live-preview";
 export const useAi = (onScrollToBottom?: () => void, livePreviewRef?: React.RefObject<LivePreviewRef | null>) => {
   const client = useQueryClient();
   const audio = useRef<HTMLAudioElement | null>(null);
-  const { setPages, setCurrentPage, setPrompts, prompts, pages, project, setProject, commits, setCommits, setLastSavedPages } = useEditor();
+  const { setPages, setCurrentPage, setPrompts, prompts, pages, project, setProject, commits, setCommits, setLastSavedPages, isSameHtml } = useEditor();
   const [controller, setController] = useState<AbortController | null>(null);
   const [storageProvider, setStorageProvider] = useLocalStorage("provider", "auto");
   const [storageModel, setStorageModel] = useLocalStorage("model", MODELS[0].value);
@@ -256,7 +256,7 @@ export const useAi = (onScrollToBottom?: () => void, livePreviewRef?: React.RefO
     }
   };
 
-  const callAiFollowUp = async (prompt: string, enhancedSettings?: EnhancedSettings) => {
+  const callAiFollowUp = async (prompt: string, enhancedSettings?: EnhancedSettings, isNew?: boolean) => {
     if (isAiWorking) return;
     if (!prompt.trim()) return;
 
@@ -266,7 +266,7 @@ export const useAi = (onScrollToBottom?: () => void, livePreviewRef?: React.RefO
     const abortController = new AbortController();
     setController(abortController);
     
-    try {      
+    try {
       const request = await fetch("/api/ask", {
         method: "PUT",
         body: JSON.stringify({
@@ -277,7 +277,9 @@ export const useAi = (onScrollToBottom?: () => void, livePreviewRef?: React.RefO
           pages,
           selectedElementHtml: selectedElement?.outerHTML,
           files: selectedFiles,
-          repoId: project?.space_id
+          repoId: project?.space_id,
+          isNew,
+          enhancedSettings,
         }),
         headers: {
           "Content-Type": "application/json",
@@ -307,20 +309,25 @@ export const useAi = (onScrollToBottom?: () => void, livePreviewRef?: React.RefO
         }
 
         toast.success("AI responded successfully");
-        setIsAiWorking(false);
         const iframe = document.getElementById(
           "preview-iframe"
         ) as HTMLIFrameElement;
 
-        setPages(res.pages);
-        setLastSavedPages([...res.pages]); // Mark AI changes as saved
-        setCommits([res.commit, ...commits]);
-        setPrompts(
-          [...prompts, prompt]
-        )
-        setSelectedElement(null);
-        setSelectedFiles([]);
-        setIsEditableModeEnabled(false);
+        if (isNew && res.repoId) {
+          router.push(`/projects/${res.repoId}`);
+          setIsAiWorking(false);
+        } else {
+          setPages(res.pages);
+          setLastSavedPages([...res.pages]); // Mark AI changes as saved
+          setCommits([res.commit, ...commits]);
+          setPrompts(
+            [...prompts, prompt]
+          )
+          setSelectedElement(null);
+          setSelectedFiles([]);
+          setIsEditableModeEnabled(false);
+        }
+
         if (audio.current) audio.current.play();
         if (iframe) {
           setTimeout(() => {
