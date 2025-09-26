@@ -308,11 +308,11 @@ export const useEditor = (namespace?: string, repoId?: string) => {
       setHasUnsavedChanges(false);
       setLastSavedPages([]);
       
-      client.invalidateQueries({ queryKey: ["editor.project"] });
-      client.invalidateQueries({ queryKey: ["editor.pages"] });
-      client.invalidateQueries({ queryKey: ["editor.files"] });
-      client.invalidateQueries({ queryKey: ["editor.commits"] });
-      client.invalidateQueries({ queryKey: ["editor.currentPage"] });
+      // client.invalidateQueries({ queryKey: ["editor.project"] });
+      // client.invalidateQueries({ queryKey: ["editor.pages"] });
+      // client.invalidateQueries({ queryKey: ["editor.files"] });
+      // client.invalidateQueries({ queryKey: ["editor.commits"] });
+      // client.invalidateQueries({ queryKey: ["editor.currentPage"] });
       client.invalidateQueries({ queryKey: ["editor.currentCommit"] });
       client.invalidateQueries({ queryKey: ["editor.lastSavedPages"] });
       client.invalidateQueries({ queryKey: ["editor.hasUnsavedChanges"] });

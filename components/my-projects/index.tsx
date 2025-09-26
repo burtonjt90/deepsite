@@ -94,7 +94,7 @@ export function MyProjects() {
           )}
           {projects.map((project: ProjectType) => (
             <ProjectCard
-              key={project.name}
+              key={project.id}
               project={project}
               onDelete={() => onDelete(project)}
             />
