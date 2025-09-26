@@ -1,32 +1,11 @@
-import type { NextConfig } from "next";
+// next.config.ts
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  webpack(config, options) {
-    const { isServer } = options;
-    config.module.rules.push({
-      test: /\.(ogg|mp3|wav|mpe?g)$/i,
-      exclude: config.exclude,
-      use: [
-        {
-          loader: require.resolve("url-loader"),
-          options: {
-            limit: config.inlineImageLimit,
-            fallback: require.resolve("file-loader"),
-            publicPath: `${config.assetPrefix}/_next/static/images/`,
-            outputPath: `${isServer ? "../" : ""}static/images/`,
-            name: "[name]-[hash].[ext]",
-            esModule: config.esModule || false,
-          },
-        },
-      ],
-    });
-
-    return config;
-  },
-  images: {
-    remotePatterns: [new URL('https://huggingface.co/**')],
-  },
+  output: 'export',          // generate static HTML into /out
+  images: { unoptimized: true }, // allow <Image> during export
+  trailingSlash: true,       // avoids folder index issues on static hosts
 };
 
 export default nextConfig;
+
