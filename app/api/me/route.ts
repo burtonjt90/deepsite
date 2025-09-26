@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { listSpaces } from "@huggingface/hub";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
