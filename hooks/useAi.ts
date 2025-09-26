@@ -326,6 +326,7 @@ export const useAi = (onScrollToBottom?: () => void, livePreviewRef?: React.RefO
           setSelectedElement(null);
           setSelectedFiles([]);
           setIsEditableModeEnabled(false);
+          setIsAiWorking(false); // This was missing!
         }
 
         if (audio.current) audio.current.play();

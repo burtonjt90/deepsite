@@ -251,7 +251,7 @@ export const Preview = forwardRef<LivePreviewRef, { isNew: boolean }>(
             )}
             srcDoc={defaultHTML}
           />
-        ) : isLoadingProject || globalAiLoading ? (
+        ) : isNew && (isLoadingProject || globalAiLoading) ? (
           <div className="w-full h-full flex items-center justify-center relative">
             <div className="py-10 w-full relative z-1 max-w-3xl mx-auto text-center">
               <AiLoading
