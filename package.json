@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start"
-  },
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "export": "next export"
+},
   "dependencies": {
     "@huggingface/hub": "^2.6.2",
     "@huggingface/inference": "^4.7.1",
