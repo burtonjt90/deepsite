@@ -2,9 +2,10 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  output: 'export',          // generate static HTML into /out
-  images: { unoptimized: true }, // allow <Image> during export
-  trailingSlash: true,       // avoids folder index issues on static hosts
+  // IMPORTANT: no `output: 'export'`
+  reactStrictMode: true,
+  // If you use external images, add allowed domains here later.
+  // images: { domains: ['example.com'] },
 };
 
 export default nextConfig;
