@@ -92,9 +92,11 @@ export const AppEditor = ({
                 horizontal: "hidden",
               },
               wordWrap: "on",
-              readOnly: !!isAiWorking || !!currentCommit,
+              readOnly: !!isAiWorking || !!currentCommit || isNew,
               readOnlyMessage: {
-                value: currentCommit
+                value: isNew
+                  ? "You can't edit the code, as this is a new project. Ask DeepSite first."
+                  : currentCommit
                   ? "You can't edit the code, as this is an old version of the project."
                   : "Wait for DeepSite to finish working...",
                 isTrusted: true,
