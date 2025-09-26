@@ -2,11 +2,14 @@
   "name": "deepsite-v3",
   "version": "0.1.0",
   "private": true,
+  {
   "scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start"
-},
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next export -o out",
+    "start": "next start"
+  }
+}
   "dependencies": {
     "@huggingface/hub": "^2.6.2",
     "@huggingface/inference": "^4.7.1",
