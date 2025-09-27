@@ -15,7 +15,6 @@ module.exports = {
       screens: { "2xl": "1400px" }
     },
     extend: {
-      // These match the CSS variables you’re using (shadcn-style).
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
