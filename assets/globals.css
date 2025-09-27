@@ -133,7 +133,8 @@ body {
   @apply bg-blend-normal pointer-events-none opacity-90;
   background-size: 25ww auto;
   background-image: url("/background_noisy.webp");
-  @apply fixed w-screen h-screen -z-1 top-0 left-0;
+  @apply fixed w-screen h-screen top-0 left-0;
+z-index: -1;  /* use raw CSS for -1 */
 }
 
 .monaco-editor .margin {
